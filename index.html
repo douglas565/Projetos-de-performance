@@ -1,55 +1,68 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Kaizen Hub · Gestão de Projetos</title>
-style.css
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Kaizen Hub — gestão de projetos de melhoria contínua com formulário A3 Standard Kaizen.">
+  <meta name="theme-color" content="#0b7285">
+  <title>Kaizen Hub · Gestão de Projetos</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
+<noscript>
+  <p style="padding:16px;text-align:center">
+    Este aplicativo requer JavaScript habilitado para funcionar.
+  </p>
+</noscript>
 
 <!-- ========== TOPO ========== -->
 <header id="topbar" class="hidden">
   <div class="brand">
-    <span class="logo">K</span>
+    <span class="logo" aria-hidden="true">K</span>
     <div>
       <strong>Kaizen Hub</strong>
       <small id="viewLabel">Meus projetos</small>
     </div>
   </div>
   <div class="topbar-right">
-    <span id="saveStatus" class="save-status"></span>
+    <span id="saveStatus" class="save-status" role="status" aria-live="polite"></span>
     <span id="userChip" class="chip"></span>
-    <button id="btnLogout" class="btn ghost">Sair</button>
+    <button type="button" id="btnLogout" class="btn ghost">Sair</button>
   </div>
 </header>
 
 <!-- ========== VIEW 1: LOGIN ========== -->
 <main id="viewLogin" class="login-wrap">
   <div class="login-card">
-    <div class="login-brand"><span class="logo big">K</span></div>
+    <div class="login-brand"><span class="logo big" aria-hidden="true">K</span></div>
     <h1>Kaizen Hub</h1>
     <p class="muted">Acesse para gerenciar seus projetos de melhoria contínua.</p>
 
-    <div class="tabs">
-      <button class="tab active" data-tab="signin">Entrar</button>
-      <button class="tab" data-tab="signup">Criar conta</button>
+    <div class="tabs" role="tablist">
+      <button type="button" class="tab active" data-tab="signin" role="tab" aria-selected="true">Entrar</button>
+      <button type="button" class="tab" data-tab="signup" role="tab" aria-selected="false">Criar conta</button>
     </div>
 
-    <form id="formAuth" autocomplete="on">
-      <label>E-mail
-        <input type="email" id="email" required placeholder="nome@empresa.com">
+    <form id="formAuth" autocomplete="on" novalidate>
+      <label for="email">E-mail
+        <input type="email" id="email" name="email" required
+               autocomplete="email" placeholder="nome@empresa.com">
       </label>
-      <label>Senha
-        <input type="password" id="password" required minlength="6" placeholder="mínimo 6 caracteres">
+
+      <label for="password">Senha
+        <input type="password" id="password" name="password" required minlength="6"
+               autocomplete="current-password" placeholder="mínimo 6 caracteres">
       </label>
-      <label id="nameField" class="hidden">Nome completo
-        <input type="text" id="displayName" placeholder="Seu nome">
+
+      <label id="nameField" class="hidden" for="displayName">Nome completo
+        <input type="text" id="displayName" name="displayName"
+               autocomplete="name" placeholder="Seu nome">
       </label>
 
       <button type="submit" id="btnAuth" class="btn primary block">Entrar</button>
       <button type="button" id="btnReset" class="btn link">Esqueci minha senha</button>
-      <p id="authMsg" class="msg"></p>
+      <p id="authMsg" class="msg" role="alert" aria-live="assertive"></p>
     </form>
   </div>
 </main>
@@ -62,8 +75,9 @@ style.css
       <p class="muted" id="hubCount">—</p>
     </div>
     <div class="hub-actions">
+      <label class="sr-only" for="searchProjects">Buscar projeto</label>
       <input type="search" id="searchProjects" placeholder="Buscar projeto...">
-      <button id="btnNewProject" class="btn primary">+ Novo projeto Kaizen</button>
+      <button type="button" id="btnNewProject" class="btn primary">+ Novo projeto Kaizen</button>
     </div>
   </div>
 
@@ -72,18 +86,18 @@ style.css
   <div id="emptyState" class="empty hidden">
     <h3>Nenhum projeto ainda</h3>
     <p>Crie seu primeiro Kaizen e comece a preencher — tudo é salvo automaticamente.</p>
-    <button class="btn primary" onclick="document.getElementById('btnNewProject').click()">+ Criar primeiro projeto</button>
+    <button type="button" id="btnFirstProject" class="btn primary">+ Criar primeiro projeto</button>
   </div>
 </main>
 
 <!-- ========== VIEW 3: EDITOR KAIZEN ========== -->
 <main id="viewProject" class="hidden container">
   <div class="proj-head">
-    <button id="btnBack" class="btn ghost">← Voltar ao hub</button>
+    <button type="button" id="btnBack" class="btn ghost">← Voltar ao hub</button>
     <div class="proj-head-right">
       <span class="pill" id="pillUpdated"></span>
-      <button id="btnPrint" class="btn ghost">Imprimir / PDF</button>
-      <button id="btnDelete" class="btn danger">Excluir</button>
+      <button type="button" id="btnPrint" class="btn ghost">Imprimir / PDF</button>
+      <button type="button" id="btnDelete" class="btn danger">Excluir</button>
     </div>
   </div>
 
@@ -96,26 +110,41 @@ style.css
           <h3>STANDARD KAIZEN</h3>
           <small>SOL-FR-0013 Rev00</small>
         </div>
-        <div class="pillars">
+        <fieldset class="pillars">
+          <legend class="sr-only">Pilares impactados</legend>
           <label class="pilar"><input type="checkbox" data-f="pilar_seguranca"><span>Segurança</span></label>
           <label class="pilar"><input type="checkbox" data-f="pilar_qualidade"><span>Qualidade</span></label>
           <label class="pilar"><input type="checkbox" data-f="pilar_entrega"><span>Entrega</span></label>
           <label class="pilar"><input type="checkbox" data-f="pilar_lucratividade"><span>Lucratividade</span></label>
           <label class="pilar"><input type="checkbox" data-f="pilar_pessoas"><span>Pessoas</span></label>
-        </div>
+        </fieldset>
       </div>
 
       <div class="grid-4">
-        <label>PROJETO<input type="text" data-f="projeto" placeholder="Nome do projeto"></label>
-        <label>PROCESSO / ÁREA<input type="text" data-f="area" placeholder="Local/Área da melhoria"></label>
-        <label>DATA<input type="date" data-f="data"></label>
-        <label>LÍDER DO KAIZEN<input type="text" data-f="lider" placeholder="Responsável"></label>
-        <label class="span2">PARTICIPANTES<input type="text" data-f="participantes" placeholder="Conectado ao plano de ação"></label>
+        <label>PROJETO
+          <input type="text" data-f="projeto" placeholder="Nome do projeto">
+        </label>
+        <label>PROCESSO / ÁREA
+          <input type="text" data-f="area" placeholder="Local/Área da melhoria">
+        </label>
+        <label>DATA
+          <input type="date" data-f="data">
+        </label>
+        <label>LÍDER DO KAIZEN
+          <input type="text" data-f="lider" placeholder="Responsável">
+        </label>
+        <label class="span2">PARTICIPANTES
+          <input type="text" data-f="participantes" placeholder="Conectado ao plano de ação">
+        </label>
         <label>ÁREA DE NEGÓCIO
           <select data-f="areaNegocio">
             <option value="">—</option>
-            <option>Operação</option><option>DAF</option><option>EO</option>
-            <option>H&amp;S</option><option>Jurídico e Ética</option><option>P&amp;C</option>
+            <option>Operação</option>
+            <option>DAF</option>
+            <option>EO</option>
+            <option>H&amp;S</option>
+            <option>Jurídico e Ética</option>
+            <option>P&amp;C</option>
           </select>
         </label>
         <label>% CONCLUÍDA
@@ -124,22 +153,25 @@ style.css
       </div>
     </section>
 
-    <!-- Blocos 1,2,3 -->
+    <!-- Blocos 1, 3 e 5 -->
     <div class="cols3">
       <section class="card">
         <h4>1. Incômodo / Oportunidade</h4>
         <p class="hint">Claro, conciso e mensurável. Inclua números quando possível.</p>
-        <textarea data-f="incomodo" rows="8"></textarea>
+        <label class="sr-only" for="fIncomodo">Incômodo ou oportunidade</label>
+        <textarea id="fIncomodo" data-f="incomodo" rows="8"></textarea>
       </section>
       <section class="card">
         <h4>3. Meta / Objetivo / Estado futuro</h4>
         <p class="hint">Meta SMART: o que, quanto e até quando.</p>
-        <textarea data-f="meta" rows="8"></textarea>
+        <label class="sr-only" for="fMeta">Meta</label>
+        <textarea id="fMeta" data-f="meta" rows="8"></textarea>
       </section>
       <section class="card">
         <h4>5. Monitoramento e conclusões</h4>
         <p class="hint">Evidências, marcos e resultados após as ações.</p>
-        <textarea data-f="monitoramento" rows="8"></textarea>
+        <label class="sr-only" for="fMonit">Monitoramento</label>
+        <textarea id="fMonit" data-f="monitoramento" rows="8"></textarea>
       </section>
     </div>
 
@@ -148,7 +180,8 @@ style.css
       <section class="card">
         <h4>2. Análise das causas / Estado atual</h4>
         <p class="hint">5 porquês, Ishikawa (4M), Pareto, etc.</p>
-        <textarea data-f="causas" rows="7"></textarea>
+        <label class="sr-only" for="fCausas">Análise das causas</label>
+        <textarea id="fCausas" data-f="causas" rows="7"></textarea>
       </section>
       <section class="card">
         <h4>Ferramenta 5W2H</h4>
@@ -172,20 +205,24 @@ style.css
       </div>
       <div class="table-wrap">
         <table id="actionTable">
+          <caption class="sr-only">Plano de ação do projeto</caption>
           <thead>
             <tr>
-              <th style="width:48px">#</th>
-              <th>Ação</th>
-              <th style="width:160px">Resp.</th>
-              <th style="width:150px">Prazo</th>
-              <th style="width:140px">Status</th>
-              <th style="width:48px"></th>
+              <th scope="col" style="width:48px">#</th>
+              <th scope="col">Ação</th>
+              <th scope="col" style="width:160px">Resp.</th>
+              <th scope="col" style="width:150px">Prazo</th>
+              <th scope="col" style="width:140px">Status</th>
+              <th scope="col" style="width:48px"><span class="sr-only">Remover</span></th>
             </tr>
           </thead>
           <tbody></tbody>
         </table>
       </div>
-      <p class="hint">O % concluída pode ser calculado pelas ações: <button type="button" id="btnCalcPct" class="btn link inline">recalcular a partir do plano</button></p>
+      <p class="hint">
+        O % concluída pode ser calculado pelas ações:
+        <button type="button" id="btnCalcPct" class="btn link inline">recalcular a partir do plano</button>
+      </p>
     </section>
 
     <!-- Blocos 6 e 7 -->
@@ -193,13 +230,20 @@ style.css
       <section class="card">
         <h4>6. Padronização</h4>
         <p class="hint">Documentos/check-lists, auditoria, treinamento, fluxo, indicador, SIPOC/RACI.</p>
-        <textarea data-f="padronizacao" rows="6"></textarea>
+        <label class="sr-only" for="fPadron">Padronização</label>
+        <textarea id="fPadron" data-f="padronizacao" rows="6"></textarea>
       </section>
       <section class="card">
         <h4>7. Aprovação / Expansão horizontal</h4>
-        <label>Aprovação<input type="text" data-f="aprovacao" placeholder="Nome do(s) aprovador(es)"></label>
-        <label class="inline-check"><input type="checkbox" data-f="expansao"> Expansão horizontal aplicável</label>
-        <label>Área / UO<input type="text" data-f="expansaoArea" placeholder="UO que pode replicar a solução"></label>
+        <label>Aprovação
+          <input type="text" data-f="aprovacao" placeholder="Nome do(s) aprovador(es)">
+        </label>
+        <label class="inline-check">
+          <input type="checkbox" data-f="expansao"> Expansão horizontal aplicável
+        </label>
+        <label>Área / UO
+          <input type="text" data-f="expansaoArea" placeholder="UO que pode replicar a solução">
+        </label>
       </section>
     </div>
 
@@ -207,12 +251,25 @@ style.css
     <section class="card">
       <h4>8. Resultados (Business Case)</h4>
       <div class="grid-4">
-        <label>Benefício anual (R$)<input type="number" step="0.01" data-f="beneficio" placeholder="0,00"></label>
-        <label>Custo de implementação (R$)<input type="number" step="0.01" data-f="custo" placeholder="0,00"></label>
-        <label>B/C Ratio<input type="text" id="bcRatio" readonly></label>
-        <label>Tipo<select data-f="tipo"><option>Kaizen</option><option>Performance</option></select></label>
+        <label>Benefício anual (R$)
+          <input type="number" step="0.01" min="0" data-f="beneficio" placeholder="0,00">
+        </label>
+        <label>Custo de implementação (R$)
+          <input type="number" step="0.01" min="0" data-f="custo" placeholder="0,00">
+        </label>
+        <label>B/C Ratio
+          <input type="text" id="bcRatio" readonly tabindex="-1">
+        </label>
+        <label>Tipo
+          <select data-f="tipo">
+            <option>Kaizen</option>
+            <option>Performance</option>
+          </select>
+        </label>
       </div>
-      <label>Observações do BC<textarea data-f="bcObs" rows="3"></textarea></label>
+      <label>Observações do BC
+        <textarea data-f="bcObs" rows="3"></textarea>
+      </label>
     </section>
 
     <!-- Análise de risco -->
@@ -223,15 +280,16 @@ style.css
       </div>
       <div class="table-wrap">
         <table id="riskTable">
+          <caption class="sr-only">Riscos e oportunidades</caption>
           <thead>
             <tr>
-              <th>Descrição do risco</th>
-              <th style="width:110px">Severidade</th>
-              <th style="width:110px">Probabilid.</th>
-              <th style="width:80px">Score</th>
-              <th>Ação de mitigação</th>
-              <th style="width:140px">Responsável</th>
-              <th style="width:48px"></th>
+              <th scope="col">Descrição do risco</th>
+              <th scope="col" style="width:110px">Severidade</th>
+              <th scope="col" style="width:110px">Probabilid.</th>
+              <th scope="col" style="width:80px">Score</th>
+              <th scope="col">Ação de mitigação</th>
+              <th scope="col" style="width:140px">Responsável</th>
+              <th scope="col" style="width:48px"><span class="sr-only">Remover</span></th>
             </tr>
           </thead>
           <tbody></tbody>
@@ -241,7 +299,10 @@ style.css
   </form>
 </main>
 
-<div id="toast" class="toast hidden"></div>
+<div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
-<scripte-config.js>
-<script type="module"l>
+<!-- ========== SCRIPTS ========== -->
+<script type="module" src="app.js"></script>
+
+</body>
+</html>
