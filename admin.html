@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel Executivo · Kaizen Hub</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="admin.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<header id="topbar">
+  <div class="brand">
+    <span class="logo">K</span>
+    <div>
+      <strong>Portfólio de Projetos</strong>
+      <small>Painel executivo · administrador</small>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <a href="index.html" class="btn ghost">← Meus projetos</a>
+    <span id="userChip" class="chip"></span>
+    <button id="btnLogout" class="btn ghost">Sair</button>
+  </div>
+</header>
+
+<!-- BLOQUEIO -->
+<main id="viewDenied" class="denied hidden">
+  <div class="login-card">
+    <h1>Acesso restrito</h1>
+    <p class="muted" id="deniedMsg">Este painel é exclusivo para administradores.</p>
+    <a href="index.html" class="btn primary block">Voltar ao hub</a>
+  </div>
+</main>
+
+<main id="viewLoading" class="denied">
+  <p class="muted">Carregando portfólio...</p>
+</main>
+
+<!-- DASHBOARD -->
+<main id="viewAdmin" class="hidden container">
+
+  <div class="hub-head">
+    <div>
+      <h2>Dashboard executivo</h2>
+      <p class="muted">Visão consolidada de todos os projetos · atualização automática</p>
+    </div>
+    <div class="hub-actions">
+      <select id="fArea"><option value="">Todas as áreas</option></select>
+      <select id="fTipo">
+        <option value="">Todos os tipos</option>
+        <option>Kaizen</option>
+        <option>Performance</option>
+      </select>
+      <button id="btnExport" class="btn ghost">Exportar CSV</button>
+      <button id="btnAdmins" class="btn primary">Administradores</button>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpis">
+    <div class="kpi"><small>PROJETOS</small><strong id="kProj">0</strong></div>
+    <div class="kpi"><small>CONCLUSÃO MÉDIA</small><strong id="kConc">0%</strong></div>
+    <div class="kpi"><small>INVESTIMENTO TOTAL</small><strong id="kInv">R$ 0,00</strong></div>
+    <div class="kpi"><small>BENEFÍCIO FINANCEIRO</small><strong id="kBen">R$ 0,00</strong></div>
+  </div>
+
+  <!-- GRÁFICOS -->
+  <div class="cols2">
+    <section class="card">
+      <h4>Conclusão média por área</h4>
+      <div class="chart-box"><canvas id="chConclusao"></canvas></div>
+    </section>
+    <section class="card">
+      <h4>Projetos por área</h4>
+      <div class="chart-box"><canvas id="chProjetos"></canvas></div>
+    </section>
+  </div>
+
+  <div class="cols2">
+    <section class="card">
+      <h4>Benefício financeiro por área (R$)</h4>
+      <div class="chart-box"><canvas id="chBeneficio"></canvas></div>
+    </section>
+    <section class="card">
+      <h4>Investimento × Benefício por área (R$)</h4>
+      <div class="chart-box"><canvas id="chInvBen"></canvas></div>
+    </section>
+  </div>
+
+  <!-- RESUMO POR ÁREA -->
+  <section class="card">
+    <h4>Resumo por área</h4>
+    <div class="table-wrap">
+      <table id="tbArea">
+        <thead><tr>
+          <th>Área de negócio</th><th>Projetos</th><th>Conclusão média</th>
+          <th>Investimento</th><th>Benefício</th>
+        </tr></thead>
+        <tbody></tbody>
+        <tfoot></tfoot>
+      </table>
+    </div>
+  </section>
+
+  <!-- TODOS OS PROJETOS -->
+  <section class="card">
+    <div class="card-head">
+      <h4>Acompanhamento dos projetos</h4>
+      <input type="search" id="fBusca" placeholder="Buscar projeto, líder...">
+    </div>
+    <div class="table-wrap">
+      <table id="tbProjetos">
+        <thead><tr>
+          <th style="width:32px"></th>
+          <th>Área</th><th>Nome</th><th>% concluída</th><th>Atribuída a</th>
+          <th>Investimento</th><th>Tipo</th><th>Benef. Financ. (R$)</th>
+          <th>Ações</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="hint">Clique na seta para expandir o plano de ação do projeto.</p>
+  </section>
+</main>
+
+<!-- MODAL ADMINISTRADORES -->
+<div id="modalAdmins" class="modal hidden">
+  <div class="modal-box">
+    <div class="card-head">
+      <h4>Administradores do portfólio</h4>
+      <button id="btnCloseAdmins" class="rm">✕</button>
+    </div>
+    <p class="hint">Somente e-mails desta lista acessam o painel executivo.</p>
+    <ul id="adminList" class="admin-list"></ul>
+    <div class="add-admin">
+      <input type="email" id="newAdmin" placeholder="nome@engie.com">
+      <button id="btnAddAdmin" class="btn primary">Adicionar</button>
+    </div>
+    <p id="adminMsg" class="msg"></p>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script type="module" src="admin.js"></script>
+</body>
+</html>

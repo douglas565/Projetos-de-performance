@@ -83,13 +83,32 @@ function traduzErro(code) {
   return m[code] || "Erro: " + code;
 }
 
+// ---------- link do painel executivo (só administradores) ----------
+async function checarAdmin(user) {
+  const link = $("#linkAdmin");
+  if (!link) return;
+  try {
+    const s = await getDoc(doc(db, "config", "admins"));
+    const admins = s.exists() ? (s.data().emails || []) : [];
+    if (admins.length === 0 || admins.includes((user.email || "").toLowerCase())) {
+      show(link);
+    } else {
+      hide(link);
+    }
+  } catch (e) {
+    hide(link);
+  }
+}
+
 onAuthStateChanged(auth, (user) => {
   currentUser = user;
   if (user) {
     hide($("#viewLogin")); show($("#topbar"));
     $("#userChip").textContent = user.displayName || user.email;
+    checarAdmin(user);
     abrirHub();
   } else {
+    $("#linkAdmin")?.classList.add("hidden");
     if (unsubProjects) unsubProjects();
     hide($("#topbar")); hide($("#viewHub")); hide($("#viewProject"));
     show($("#viewLogin"));
@@ -157,6 +176,8 @@ $("#btnNewProject").onclick = async () => {
   abrirProjeto(ref.id);
   toast("Novo Kaizen criado — preencha, o salvamento é automático.");
 };
+
+$("#btnFirstProject")?.addEventListener("click", () => $("#btnNewProject").click());
 
 function modeloKaizen() {
   return {

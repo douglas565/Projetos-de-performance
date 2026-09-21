@@ -1,0 +1,42 @@
+/* ===== Painel executivo (complementa style.css) ===== */
+.denied{min-height:70vh;display:grid;place-items:center;padding:20px}
+.denied .login-card{text-align:center;max-width:420px}
+
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px}
+.kpi{background:#fff;border:1px solid var(--line);border-radius:var(--radius);
+     padding:18px;box-shadow:var(--shadow);border-left:4px solid var(--brand)}
+.kpi small{display:block;font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--muted)}
+.kpi strong{display:block;font-size:26px;margin-top:6px;line-height:1.1}
+.kpi:nth-child(2){border-left-color:#00c2ff}
+.kpi:nth-child(3){border-left-color:var(--warn)}
+.kpi:nth-child(4){border-left-color:var(--ok)}
+@media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:520px){.kpis{grid-template-columns:1fr}}
+
+.chart-box{position:relative;height:280px}
+
+.hub-actions select,.hub-actions input{margin:0}
+
+tfoot td{font-weight:700;background:#f6f8fc}
+td.num,th.num{text-align:right}
+
+.mini-bar{display:flex;align-items:center;gap:8px;min-width:110px}
+.mini-bar .bar{flex:1;height:7px}
+
+.expander{border:none;background:none;cursor:pointer;color:var(--brand);font-size:14px;font-weight:700}
+tr.sub td{background:#f9fbff;font-size:13px}
+.sub-actions{margin:0;padding:6px 0 6px 18px}
+.sub-actions li{margin-bottom:4px}
+.st{font-size:11px;padding:2px 8px;border-radius:20px;font-weight:700;margin-left:6px}
+.st-ok{background:#e4f7ef;color:var(--ok)}
+.st-run{background:#fff4d9;color:var(--warn)}
+.st-late{background:#fdeaea;color:var(--danger)}
+.st-new{background:#eef3fb;color:var(--muted)}
+
+.modal{position:fixed;inset:0;background:rgba(18,38,63,.55);display:grid;place-items:center;z-index:60;padding:20px}
+.modal-box{background:#fff;border-radius:var(--radius);padding:20px;width:100%;max-width:480px;box-shadow:var(--shadow)}
+.admin-list{list-style:none;padding:0;margin:10px 0;max-height:260px;overflow:auto}
+.admin-list li{display:flex;justify-content:space-between;align-items:center;
+               padding:9px 12px;border:1px solid var(--line);border-radius:9px;margin-bottom:7px;font-size:14px}
+.add-admin{display:flex;gap:8px}
+.add-admin input{margin:0}
