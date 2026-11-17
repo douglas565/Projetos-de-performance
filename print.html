@@ -462,7 +462,8 @@
 
 <!-- SCRIPT DE CARREGAMENTO DOS DADOS PARA IMPRESSÃO -->
 <script type="module">
-  import { db } from "./firebase-config.js";
+  import { auth, db } from "./firebase-config.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
   import { calculateRiskScore, calculateBcRatio } from "./js/kaizen-model.js";
 
@@ -504,7 +505,8 @@
 
   async function loadKaizenData() {
     if (!kaizenId) {
-      alert("Nenhum ID de Kaizen fornecido na URL.");
+      alert("Nenhum identificador de Kaizen fornecido na URL.");
+      window.location.href = "index.html";
       return;
     }
 
@@ -512,12 +514,21 @@
       const snap = await getDoc(doc(db, "kaizens", kaizenId));
       if (!snap.exists()) {
         alert("Kaizen não encontrado no banco de dados.");
+        window.location.href = "index.html";
         return;
       }
       renderPrintData(snap.data());
     } catch (e) {
-      console.error(e);
-      alert("Erro ao carregar dados do Kaizen: " + e.message);
+      console.error("Erro ao carregar Kaizen para impressão:", e);
+      const isPermissionDenied = e.code === "permission-denied" ||
+        (typeof e.message === "string" && e.message.toLowerCase().includes("permission"));
+
+      if (isPermissionDenied) {
+        alert("Você não possui permissão para visualizar ou imprimir este Kaizen.");
+      } else {
+        alert("Não foi possível carregar os dados do Kaizen para impressão. Verifique sua conexão e tente novamente.");
+      }
+      window.location.href = "index.html";
     }
   }
 
@@ -749,7 +760,14 @@
     });
   }
 
-  loadKaizenData();
+  onAuthStateChanged(auth, (user) => {
+    if (!user) {
+      alert("Você precisa estar autenticado no Kaizen Hub para imprimir este projeto.");
+      window.location.href = "index.html";
+      return;
+    }
+    loadKaizenData();
+  });
 </script>
 
 </body>

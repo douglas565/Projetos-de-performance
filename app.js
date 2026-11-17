@@ -27,7 +27,8 @@ import {
   calculatePercentualFromActions,
   calculateRiskScore,
   canUserRead,
-  canUserEdit
+  canUserEdit,
+  normalizeString
 } from "./js/kaizen-model.js";
 import {
   showToast,
@@ -328,7 +329,7 @@ function renderHub() {
   const stats = $("#hubStats");
   if (!grid) return;
 
-  const searchTerm = ($("#searchProjects")?.value || "").trim().toLowerCase();
+  const searchTerm = normalizeString($("#searchProjects")?.value || "");
   const fArea = $("#filterArea")?.value || "";
   const fTipo = $("#filterTipo")?.value || "";
   const fBeneficio = $("#filterBeneficio")?.value || "";
@@ -344,10 +345,10 @@ function renderHub() {
 
     if (searchTerm) {
       const matchKeywords = Array.isArray(k.searchKeywords) && k.searchKeywords.some((kw) => kw.includes(searchTerm));
-      const matchText = (k.projeto || "").toLowerCase().includes(searchTerm) ||
-                        (k.codigo || "").toLowerCase().includes(searchTerm) ||
-                        (k.lider || "").toLowerCase().includes(searchTerm) ||
-                        (k.area || "").toLowerCase().includes(searchTerm);
+      const matchText = normalizeString(k.projeto || "").includes(searchTerm) ||
+                        normalizeString(k.codigo || "").includes(searchTerm) ||
+                        normalizeString(k.lider || "").includes(searchTerm) ||
+                        normalizeString(k.area || "").includes(searchTerm);
       if (!matchKeywords && !matchText) return false;
     }
     return true;
@@ -507,6 +508,12 @@ function setupEditorUI() {
 
   $("#btnShare").onclick = () => {
     if (!activeKaizen) return;
+    // F2: Somente o criador/dono do Kaizen ou um administrador pode alterar compartilhamentos
+    const isOwnerOrAdmin = (activeKaizen.ownerUid === currentUser?.uid) || (currentUserProfile && currentUserProfile.role === "admin");
+    if (!isOwnerOrAdmin) {
+      showToast("Apenas o criador do Kaizen ou administradores podem gerenciar o compartilhamento.", "warning");
+      return;
+    }
     openSharingModal({
       kaizen: activeKaizen,
       currentUser,
@@ -604,7 +611,6 @@ function populateEditorForm(k, canEdit) {
   $('[data-f="tipo"]').value = k.tipo || "kaizen";
   $('[data-f="status"]').value = k.status || "em_andamento";
   $('[data-f="percentual"]').value = k.percentual ?? 0;
-  $('[data-f="visibilidade"]').value = k.visibilidade || "privado";
 
   // Blocos 1, 3 e 5
   $('[data-f="incomodo"]').value = k.incomodo || "";
@@ -654,13 +660,25 @@ function populateEditorForm(k, canEdit) {
     }
   });
 
+  const isOwnerOrAdmin = (k.ownerUid === currentUser?.uid) || (currentUserProfile && currentUserProfile.role === "admin");
+
   if (!canEdit) {
     $("#btnDelete")?.classList.add("hidden");
     $("#btnShare")?.classList.add("hidden");
+    $("#btnShare")?.setAttribute("disabled", "disabled");
     setSaveStatus("saved", "Somente leitura");
   } else {
-    $("#btnDelete")?.classList.remove("hidden");
-    $("#btnShare")?.classList.remove("hidden");
+    // F2: Editores podem editar o conteúdo do Kaizen normalmente, mas NUNCA re-compartilhar nem excluir.
+    // Somente o criador/dono (ownerUid) ou um administrador podem gerenciar permissões de compartilhamento ou deletar.
+    if (isOwnerOrAdmin) {
+      $("#btnDelete")?.classList.remove("hidden");
+      $("#btnShare")?.classList.remove("hidden");
+      $("#btnShare")?.removeAttribute("disabled");
+    } else {
+      $("#btnDelete")?.classList.add("hidden");
+      $("#btnShare")?.classList.add("hidden");
+      $("#btnShare")?.setAttribute("disabled", "disabled");
+    }
   }
 }
 

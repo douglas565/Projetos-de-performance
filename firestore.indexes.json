@@ -42,14 +42,6 @@
       ]
     },
     {
-      "collectionGroup": "kaizens",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "visibilidade", "order": "ASCENDING" },
-        { "fieldPath": "atualizadoEm", "order": "DESCENDING" }
-      ]
-    },
-    {
       "collectionGroup": "users",
       "queryScope": "COLLECTION",
       "fields": [

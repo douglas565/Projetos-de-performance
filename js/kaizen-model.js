@@ -217,7 +217,7 @@ export function createDefaultKaizen(user = {}) {
     anexos: [],
     status: "em_andamento", // rascunho | em_andamento | concluido | cancelado
     percentual: 0,
-    visibilidade: "privado", // privado | compartilhado
+    visibilidade: "privado", // Fixo: todo kaizen é individual e privado por padrão
     ownerUid: uid,
     ownerEmail: email,
     ownerNome: nome,
@@ -308,8 +308,6 @@ export function canUserRead(kaizen, user, userProfile) {
   if (Array.isArray(kaizen.sharedWithUids) && kaizen.sharedWithUids.includes(user.uid)) return true;
   if (Array.isArray(kaizen.viewersUids) && kaizen.viewersUids.includes(user.uid)) return true;
   if (Array.isArray(kaizen.editorsUids) && kaizen.editorsUids.includes(user.uid)) return true;
-  // Compatibilidade caso visibilidade esteja como 'compartilhado'
-  if (kaizen.visibilidade === "compartilhado") return true;
   return false;
 }
 
@@ -450,7 +448,7 @@ export function migrateLegacyProject(legacy, user = {}) {
     anexos: [],
     status: legacy.status || (pct >= 100 ? "concluido" : "em_andamento"),
     percentual: pct,
-    visibilidade: legacy.visibilidade || "privado",
+    visibilidade: "privado",
     ownerUid: uid,
     ownerEmail: email,
     ownerNome: nome,

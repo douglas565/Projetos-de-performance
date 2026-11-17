@@ -35,6 +35,7 @@ Este guia descreve os passos manuais necessários no **Firebase Console** (proje
 > **Resumo de proteção das regras:**
 > - Leitura de Kaizens: somente usuários autenticados com `status == 'active'` que sejam donos, estejam na lista de compartilhamento (`sharedWithUids` / `viewersUids` / `editorsUids`) ou administradores (`role == 'admin'`).
 > - Escrita de Kaizens: somente dono, editores autorizados ou administrador. Visualizadores (`view`) nunca gravam.
+> - Compartilhamento de Kaizens: somente o criador/dono ou administrador pode alterar permissões (`shares`, `viewersUids`, `editorsUids`, `sharedWithUids`). Editores de conteúdo não podem re-compartilhar.
 > - Concorrência otimista: validação estrita de `request.resource.data.rev == resource.data.rev + 1`.
 > - Novos cadastros: criados obrigatoriamente com `status: 'pending'` e `role: 'user'`.
 

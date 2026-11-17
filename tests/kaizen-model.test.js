@@ -170,6 +170,46 @@ test("canUserRead() e canUserEdit() respeitam papéis de owner, edit, view e adm
   assert.equal(canUserEdit(kaizen, strangerUser, adminProfile), true, "Admin pode editar");
 });
 
+test("F1: visibilidade 'compartilhado' NUNCA libera leitura para terceiros (apenas view/edit explícito)", () => {
+  const kaizenPrivado = {
+    ownerUid: "dono-123",
+    viewersUids: [],
+    editorsUids: [],
+    sharedWithUids: [],
+    visibilidade: "privado"
+  };
+
+  const kaizenComCampoCompartilhado = {
+    ownerUid: "dono-123",
+    viewersUids: [],
+    editorsUids: [],
+    sharedWithUids: [],
+    visibilidade: "compartilhado"
+  };
+
+  const terceiro = { uid: "terceiro-456" };
+  const perfilComum = { role: "user" };
+
+  // Terceiro não deve ler nenhum dos dois
+  assert.equal(canUserRead(kaizenPrivado, terceiro, perfilComum), false, "Terceiro não lê kaizen privado");
+  assert.equal(canUserRead(kaizenComCampoCompartilhado, terceiro, perfilComum), false, "visibilidade=='compartilhado' NUNCA deve liberar leitura a terceiro sem papel explícito");
+
+  // Apenas a concessão explícita de papel concede leitura
+  const kaizenComViewer = {
+    ...kaizenComCampoCompartilhado,
+    viewersUids: ["terceiro-456"],
+    sharedWithUids: ["terceiro-456"]
+  };
+  assert.equal(canUserRead(kaizenComViewer, terceiro, perfilComum), true, "Papel view explícito libera leitura");
+
+  const kaizenComEditor = {
+    ...kaizenComCampoCompartilhado,
+    editorsUids: ["terceiro-456"],
+    sharedWithUids: ["terceiro-456"]
+  };
+  assert.equal(canUserRead(kaizenComEditor, terceiro, perfilComum), true, "Papel edit explícito libera leitura");
+});
+
 test("generateSearchKeywords() indexa campos do kaizen e links", () => {
   const k = {
     codigo: "KZ-20261117-0042",

@@ -72,13 +72,31 @@ service cloud.firestore {
       function k()  { return resource.data; }
       function nk() { return request.resource.data; }
 
+      function isOwnerOrAdmin() {
+        return k().ownerUid == uid() || isAdmin();
+      }
+
+      function listField(doc, f) {
+        return (f in doc) ? doc[f] : [];
+      }
+
+      // F2: Editores de conteúdo NUNCA podem alterar compartilhamentos (re-compartilhar,
+      // remover colaboradores ou alterar papéis de acesso). Essa atribuição pertence
+      // exclusivamente ao dono do Kaizen ou a um administrador do sistema.
+      // Se não for dono nem admin, as 4 listas de compartilhamento DEVEM ser idênticas.
+      function sameSharing() {
+        return listField(nk(), 'shares') == listField(k(), 'shares')
+            && listField(nk(), 'viewersUids') == listField(k(), 'viewersUids')
+            && listField(nk(), 'editorsUids') == listField(k(), 'editorsUids')
+            && listField(nk(), 'sharedWithUids') == listField(k(), 'sharedWithUids');
+      }
+
       function canRead() {
         return isActive() && (
           k().ownerUid == uid()
           || (('sharedWithUids' in k()) && uid() in k().sharedWithUids)
           || (('viewersUids' in k()) && uid() in k().viewersUids)
           || (('editorsUids' in k()) && uid() in k().editorsUids)
-          || (('visibilidade' in k()) && k().visibilidade == 'compartilhado')
           || isAdmin()
         );
       }
@@ -104,7 +122,8 @@ service cloud.firestore {
         && nk().ownerUid == k().ownerUid
         && nk().schemaVersion == k().schemaVersion
         && nk().rev == k().rev + 1
-        && nk().atualizadoEm != null;
+        && nk().atualizadoEm != null
+        && (isOwnerOrAdmin() || sameSharing());
 
       allow delete: if isAdmin();
     }
