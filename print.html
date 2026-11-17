@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-page-size="a4">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Impressão Kaizen · STANDARD KAIZEN SOL-FR-0013</title>
+  <link rel="stylesheet" href="style.css?v=20261117-01">
+  <style>
+    /* Estilos específicos de impressão */
+    @page {
+      size: A4 portrait;
+      margin: 12mm;
+    }
+    html[data-page-size="a3"] {
+      --page-size: A3 landscape;
+    }
+    @page a3-page {
+      size: A3 landscape;
+      margin: 14mm;
+    }
+
+    body {
+      background: #f8fafc;
+      color: #0f172a;
+      font-size: 12px;
+      line-height: 1.45;
+      padding: 0;
+      margin: 0;
+    }
+
+    /* Barra de controle no topo (oculta na impressão) */
+    .print-bar {
+      position: sticky;
+      top: 0;
+      background: #1e293b;
+      color: #fff;
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 100;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    }
+    .print-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .print-badge {
+      background: #334155;
+      color: #94a3b8;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    /* Folha Standard Kaizen */
+    .sheet {
+      max-width: 960px;
+      margin: 24px auto;
+      background: #fff;
+      padding: 32px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      border: 1px solid #cbd5e1;
+      border-radius: 4px;
+    }
+
+    html[data-page-size="a3"] .sheet {
+      max-width: 1360px;
+    }
+
+    .doc-header {
+      border: 2px solid #0f172a;
+      padding: 12px 16px;
+      margin-bottom: 14px;
+      background: #f8fafc;
+    }
+    .doc-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid #0f172a;
+      padding-bottom: 8px;
+      margin-bottom: 10px;
+    }
+    .doc-title-row h1 {
+      font-size: 20px;
+      font-weight: 800;
+      margin: 0;
+      color: #0a66ff;
+      letter-spacing: 0.05em;
+    }
+    .doc-code-pill {
+      font-family: monospace;
+      font-size: 13px;
+      font-weight: 700;
+      background: #0f172a;
+      color: #fff;
+      padding: 4px 10px;
+      border-radius: 4px;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px 14px;
+      font-size: 11px;
+    }
+    .meta-item strong {
+      display: block;
+      color: #64748b;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .meta-item span {
+      font-size: 12px;
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .pillars-box {
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px dashed #cbd5e1;
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      font-size: 11px;
+    }
+    .pillar-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-weight: 600;
+      color: #64748b;
+    }
+    .pillar-tag.active {
+      color: #0a66ff;
+      font-weight: 700;
+    }
+
+    /* Seções e Blocos Numerados */
+    .block-grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .block-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .p-box {
+      border: 1px solid #94a3b8;
+      border-radius: 4px;
+      padding: 10px 12px;
+      background: #fff;
+      break-inside: avoid;
+    }
+    .p-box h3 {
+      font-size: 12px;
+      font-weight: 800;
+      margin: 0 0 6px;
+      color: #0f172a;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .p-box p {
+      margin: 0;
+      font-size: 11px;
+      white-space: pre-wrap;
+      color: #334155;
+    }
+
+    /* Tabelas limpas para impressão */
+    .p-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+      margin-top: 6px;
+    }
+    .p-table th {
+      background: #f1f5f9;
+      color: #475569;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      border: 1px solid #cbd5e1;
+      padding: 6px 8px;
+      text-align: left;
+    }
+    .p-table td {
+      border: 1px solid #cbd5e1;
+      padding: 5px 8px;
+      vertical-align: middle;
+      color: #1e293b;
+    }
+
+    /* 5W2H Grid compacto */
+    .w5h2-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px 12px;
+      font-size: 11px;
+    }
+    .w-item strong {
+      display: inline-block;
+      width: 80px;
+      color: #64748b;
+      font-size: 10px;
+      text-transform: uppercase;
+    }
+
+    .doc-footer {
+      margin-top: 20px;
+      border-top: 1px solid #cbd5e1;
+      padding-top: 8px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: #64748b;
+    }
+
+    /* Impressão física e PDF */
+    @media print {
+      .print-bar { display: none !important; }
+      body { background: #fff !important; color: #000 !important; }
+      .sheet {
+        box-shadow: none !important;
+        border: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        max-width: none !important;
+      }
+      .p-box {
+        break-inside: avoid !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- BARRA DE CONTROLE SUPERIOR (apenas em tela) -->
+<div class="print-bar">
+  <div style="display:flex;align-items:center;gap:12px">
+    <button type="button" id="btnBackToApp" class="btn small ghost" style="color:#fff">← Voltar ao Kaizen</button>
+    <strong id="printTitleHeader">Visualização de Impressão</strong>
+    <span class="print-badge" id="badgePageSize">Formato: A4 Retrato</span>
+  </div>
+  <div class="print-actions">
+    <button type="button" id="btnToggleFormat" class="btn small ghost" style="color:#fff">Alternar para A3 Paisagem</button>
+    <button type="button" id="btnPrintNow" class="btn small primary">🖨️ Imprimir / Salvar PDF</button>
+  </div>
+</div>
+
+<!-- FOLHA STANDARD KAIZEN -->
+<div class="sheet">
+
+  <!-- CABEÇALHO DO DOCUMENTO -->
+  <header class="doc-header">
+    <div class="doc-title-row">
+      <div>
+        <h1>STANDARD KAIZEN</h1>
+        <small style="font-weight:700;color:#64748b">SOL-FR-0013 Rev00</small>
+      </div>
+      <div style="text-align:right">
+        <span class="doc-code-pill" id="pCodigo">KZ-00000000-0000</span>
+      </div>
+    </div>
+
+    <div class="meta-grid">
+      <div class="meta-item">
+        <strong>Projeto</strong>
+        <span id="pProjeto">—</span>
+      </div>
+      <div class="meta-item">
+        <strong>Processo / Área</strong>
+        <span id="pArea">—</span>
+      </div>
+      <div class="meta-item">
+        <strong>Data</strong>
+        <span id="pData">—</span>
+      </div>
+      <div class="meta-item">
+        <strong>Líder do Kaizen</strong>
+        <span id="pLider">—</span>
+      </div>
+
+      <div class="meta-item" style="grid-column:span 2">
+        <strong>Participantes</strong>
+        <span id="pParticipantes">—</span>
+      </div>
+      <div class="meta-item">
+        <strong>Área de Negócio</strong>
+        <span id="pAreaNegocio">—</span>
+      </div>
+      <div class="meta-item">
+        <strong>Tipo de Projeto</strong>
+        <span id="pTipo">—</span>
+      </div>
+
+      <div class="meta-item">
+        <strong>Status</strong>
+        <span id="pStatus">—</span>
+      </div>
+      <div class="meta-item">
+        <strong>Conclusão</strong>
+        <span id="pPercentual">0%</span>
+      </div>
+      <div class="meta-item">
+        <strong>Tipo de Benefício</strong>
+        <span id="pTipoBeneficio">—</span>
+      </div>
+      <div class="meta-item">
+        <strong>Retorno (B/C Ratio)</strong>
+        <span id="pBcRatio">—</span>
+      </div>
+    </div>
+
+    <div class="pillars-box">
+      <strong style="color:#0f172a;text-transform:uppercase;font-size:10px">Pilares:</strong>
+      <span class="pillar-tag" id="tagPilarSeg">Segurança</span>
+      <span class="pillar-tag" id="tagPilarQual">Qualidade</span>
+      <span class="pillar-tag" id="tagPilarEntr">Entrega</span>
+      <span class="pillar-tag" id="tagPilarLucr">Lucratividade</span>
+      <span class="pillar-tag" id="tagPilarPess">Pessoas</span>
+    </div>
+  </header>
+
+  <!-- BLOCOS 1, 3 e 5 -->
+  <div class="block-grid-3">
+    <div class="p-box">
+      <h3>1. Incômodo / Oportunidade</h3>
+      <p id="pIncomodo">—</p>
+    </div>
+    <div class="p-box">
+      <h3>3. Meta / Objetivo SMART</h3>
+      <p id="pMeta">—</p>
+    </div>
+    <div class="p-box">
+      <h3>5. Monitoramento e Conclusões</h3>
+      <p id="pMonitoramento">—</p>
+    </div>
+  </div>
+
+  <!-- BLOCO 2 + 5W2H -->
+  <div class="block-grid-2">
+    <div class="p-box">
+      <h3>2. Análise das Causas / Estado Atual</h3>
+      <p id="pCausas">—</p>
+    </div>
+    <div class="p-box">
+      <h3>Ferramenta 5W2H</h3>
+      <div class="w5h2-grid">
+        <div class="w-item"><strong>What:</strong> <span id="wWhat">—</span></div>
+        <div class="w-item"><strong>Where:</strong> <span id="wWhere">—</span></div>
+        <div class="w-item"><strong>When:</strong> <span id="wWhen">—</span></div>
+        <div class="w-item"><strong>Who:</strong> <span id="wWho">—</span></div>
+        <div class="w-item"><strong>Why:</strong> <span id="wWhy">—</span></div>
+        <div class="w-item"><strong>How:</strong> <span id="wHow">—</span></div>
+        <div class="w-item" style="grid-column:span 2"><strong>How Much:</strong> <span id="wHowMuch">—</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BLOCO 4: PLANO DE AÇÃO -->
+  <div class="p-box" style="margin-bottom:12px">
+    <h3>4. Plano de Ação (Cronograma de Execução)</h3>
+    <table class="p-table" id="tableActionsPrint">
+      <thead>
+        <tr>
+          <th style="width:30px">#</th>
+          <th>Ação</th>
+          <th style="width:160px">Responsável</th>
+          <th style="width:100px">Prazo</th>
+          <th style="width:110px">Status</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <!-- BLOCOS 6 e 7 -->
+  <div class="block-grid-2">
+    <div class="p-box">
+      <h3>6. Padronização</h3>
+      <p id="pPadronizacao">—</p>
+    </div>
+    <div class="p-box">
+      <h3>7. Aprovação e Expansão Horizontal</h3>
+      <div style="font-size:11px;display:flex;flex-direction:column;gap:6px">
+        <div><strong>Aprovação:</strong> <span id="pAprovacao">—</span> (<span id="pAprovacaoStatus">Pendente</span>)</div>
+        <div><strong>Expansão horizontal:</strong> <span id="pExpansao">Não aplicável</span></div>
+        <div id="rowExpansaoArea" class="hidden"><strong>Área de replicação:</strong> <span id="pExpansaoArea">—</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BLOCO 8: RESULTADOS (BUSINESS CASE) -->
+  <div class="p-box" style="margin-bottom:12px">
+    <h3>8. Resultados (Business Case)</h3>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:8px;font-size:11px">
+      <div><strong>Benefício Anual:</strong> <span id="pBeneficio">R$ 0,00</span></div>
+      <div><strong>Custo de Implantação:</strong> <span id="pCusto">R$ 0,00</span></div>
+      <div><strong>B/C Ratio:</strong> <span id="pBcRatioVal">—</span></div>
+      <div><strong>Tipo de Benefício:</strong> <span id="pTipoBeneficioVal">—</span></div>
+    </div>
+    <div style="font-size:11px">
+      <strong>Observações:</strong>
+      <p id="pBcObs" style="margin-top:2px">—</p>
+    </div>
+  </div>
+
+  <!-- ANÁLISE DE RISCOS -->
+  <div class="p-box" id="boxRiscosPrint" style="margin-bottom:12px">
+    <h3>Análise de Riscos e Oportunidades</h3>
+    <table class="p-table" id="tableRisksPrint">
+      <thead>
+        <tr>
+          <th>Descrição do Risco</th>
+          <th style="width:70px">Sev (1-4)</th>
+          <th style="width:70px">Prob (1-4)</th>
+          <th style="width:60px">Score</th>
+          <th>Mitigação</th>
+          <th style="width:140px">Responsável</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <!-- LINKS E REFERÊNCIAS -->
+  <div class="p-box" id="boxLinksPrint" style="margin-bottom:12px">
+    <h3>Links e Referências</h3>
+    <table class="p-table" id="tableLinksPrint">
+      <thead>
+        <tr>
+          <th style="width:180px">Título</th>
+          <th>URL</th>
+          <th style="width:100px">Categoria</th>
+          <th style="width:140px">Tags</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <!-- RODAPÉ DE AUDITORIA -->
+  <footer class="doc-footer">
+    <span>STANDARD KAIZEN SOL-FR-0013 Rev00</span>
+    <span id="pGeradoEm">Gerado em: — · Kaizen Hub</span>
+  </footer>
+
+</div>
+
+<!-- SCRIPT DE CARREGAMENTO DOS DADOS PARA IMPRESSÃO -->
+<script type="module">
+  import { db } from "./firebase-config.js";
+  import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  import { calculateRiskScore, calculateBcRatio } from "./js/kaizen-model.js";
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const kaizenId = urlParams.get("id");
+
+  let isA3 = urlParams.get("format") === "a3";
+  updatePageFormat(isA3);
+
+  document.getElementById("btnToggleFormat").onclick = () => {
+    isA3 = !isA3;
+    updatePageFormat(isA3);
+  };
+
+  document.getElementById("btnPrintNow").onclick = () => window.print();
+  document.getElementById("btnBackToApp").onclick = () => {
+    if (window.opener) {
+      window.close();
+    } else {
+      window.location.href = "index.html";
+    }
+  };
+
+  function updatePageFormat(toA3) {
+    const html = document.documentElement;
+    const badge = document.getElementById("badgePageSize");
+    const btn = document.getElementById("btnToggleFormat");
+
+    if (toA3) {
+      html.setAttribute("data-page-size", "a3");
+      badge.textContent = "Formato: A3 Paisagem";
+      btn.textContent = "Alternar para A4 Retrato";
+    } else {
+      html.setAttribute("data-page-size", "a4");
+      badge.textContent = "Formato: A4 Retrato";
+      btn.textContent = "Alternar para A3 Paisagem";
+    }
+  }
+
+  async function loadKaizenData() {
+    if (!kaizenId) {
+      alert("Nenhum ID de Kaizen fornecido na URL.");
+      return;
+    }
+
+    try {
+      const snap = await getDoc(doc(db, "kaizens", kaizenId));
+      if (!snap.exists()) {
+        alert("Kaizen não encontrado no banco de dados.");
+        return;
+      }
+      renderPrintData(snap.data());
+    } catch (e) {
+      console.error(e);
+      alert("Erro ao carregar dados do Kaizen: " + e.message);
+    }
+  }
+
+  function renderPrintData(k) {
+    document.title = `${k.codigo || "Kaizen"} - ${k.projeto || "Impressão"}`;
+    document.getElementById("printTitleHeader").textContent = `${k.codigo || ""} · ${k.projeto || ""}`;
+
+    document.getElementById("pCodigo").textContent = k.codigo || "—";
+    document.getElementById("pProjeto").textContent = k.projeto || "—";
+    document.getElementById("pArea").textContent = k.area || "—";
+    document.getElementById("pData").textContent = k.data || "—";
+    document.getElementById("pLider").textContent = k.lider || "—";
+    document.getElementById("pParticipantes").textContent = Array.isArray(k.participantes) ? k.participantes.join("; ") : (k.participantes || "—");
+    document.getElementById("pAreaNegocio").textContent = k.areaNegocio || "—";
+    document.getElementById("pTipo").textContent = k.tipo === "performance" ? "Performance" : "Kaizen";
+    document.getElementById("pStatus").textContent = formatStatus(k.status);
+    document.getElementById("pPercentual").textContent = `${k.percentual || 0}%`;
+
+    const b = Number(k.beneficio) || 0;
+    const c = Number(k.custo) || 0;
+    const ratio = calculateBcRatio(b, c);
+    document.getElementById("pBcRatio").textContent = ratio !== null ? `${ratio}x` : "—";
+    document.getElementById("pBcRatioVal").textContent = ratio !== null ? `${ratio}x` : "—";
+
+    const benTypeLabel = k.tipoBeneficio === "hard_saving" ? "Hard Saving (HS)" : k.tipoBeneficio === "cost_avoidance" ? "Cost Avoidance (CA)" : "—";
+    document.getElementById("pTipoBeneficio").textContent = benTypeLabel;
+    document.getElementById("pTipoBeneficioVal").textContent = benTypeLabel;
+
+    document.getElementById("pBeneficio").textContent = b.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+    document.getElementById("pCusto").textContent = c.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+    document.getElementById("pBcObs").textContent = k.bcObs || "—";
+
+    // Pilares
+    const pilares = k.pilares || {};
+    togglePillar("tagPilarSeg", pilares.seguranca, "Segurança");
+    togglePillar("tagPilarQual", pilares.qualidade, "Qualidade");
+    togglePillar("tagPilarEntr", pilares.entrega, "Entrega");
+    togglePillar("tagPilarLucr", pilares.lucratividade, "Lucratividade");
+    togglePillar("tagPilarPess", pilares.pessoas, "Pessoas");
+
+    // Textos
+    document.getElementById("pIncomodo").textContent = k.incomodo || "—";
+    document.getElementById("pMeta").textContent = k.meta || "—";
+    document.getElementById("pMonitoramento").textContent = k.monitoramento || "—";
+    document.getElementById("pCausas").textContent = k.causas || "—";
+
+    const w = k.w2h || {};
+    document.getElementById("wWhat").textContent = w.what || "—";
+    document.getElementById("wWhere").textContent = w.where || "—";
+    document.getElementById("wWhen").textContent = w.when || "—";
+    document.getElementById("wWho").textContent = w.who || "—";
+    document.getElementById("wWhy").textContent = w.why || "—";
+    document.getElementById("wHow").textContent = w.how || "—";
+    document.getElementById("wHowMuch").textContent = w.howMuch || "—";
+
+    document.getElementById("pPadronizacao").textContent = k.padronizacao || "—";
+    document.getElementById("pAprovacao").textContent = k.aprovacao || "—";
+    document.getElementById("pAprovacaoStatus").textContent = k.aprovacaoStatus || "Pendente";
+
+    if (k.expansao) {
+      document.getElementById("pExpansao").textContent = "Sim";
+      document.getElementById("rowExpansaoArea").classList.remove("hidden");
+      document.getElementById("pExpansaoArea").textContent = k.expansaoArea || "—";
+    } else {
+      document.getElementById("pExpansao").textContent = "Não";
+      document.getElementById("rowExpansaoArea").classList.add("hidden");
+    }
+
+    // Ações
+    const tbActions = document.querySelector("#tableActionsPrint tbody");
+    tbActions.innerHTML = "";
+    const acoes = Array.isArray(k.acoes) ? k.acoes : [];
+    if (acoes.length === 0) {
+      const trEmpty = document.createElement("tr");
+      const tdEmpty = document.createElement("td");
+      tdEmpty.colSpan = 5;
+      tdEmpty.style.cssText = "text-align:center;color:#64748b";
+      tdEmpty.textContent = "Nenhuma ação cadastrada.";
+      trEmpty.appendChild(tdEmpty);
+      tbActions.appendChild(trEmpty);
+    } else {
+      acoes.forEach((a, idx) => {
+        const tr = document.createElement("tr");
+        const tdIdx = document.createElement("td");
+        tdIdx.style.fontWeight = "700";
+        tdIdx.textContent = String(idx + 1);
+        const tdDesc = document.createElement("td");
+        tdDesc.textContent = a.descricao || "";
+        const tdResp = document.createElement("td");
+        tdResp.textContent = a.responsavel || "—";
+        const tdPrazo = document.createElement("td");
+        tdPrazo.textContent = a.prazo || "—";
+        const tdSt = document.createElement("td");
+        tdSt.textContent = formatActionStatus(a.status);
+        tr.appendChild(tdIdx);
+        tr.appendChild(tdDesc);
+        tr.appendChild(tdResp);
+        tr.appendChild(tdPrazo);
+        tr.appendChild(tdSt);
+        tbActions.appendChild(tr);
+      });
+    }
+
+    // Riscos
+    const tbRisks = document.querySelector("#tableRisksPrint tbody");
+    tbRisks.innerHTML = "";
+    const riscos = Array.isArray(k.riscos) ? k.riscos : [];
+    if (riscos.length === 0) {
+      document.getElementById("boxRiscosPrint").classList.add("hidden");
+    } else {
+      document.getElementById("boxRiscosPrint").classList.remove("hidden");
+      riscos.forEach((r) => {
+        const tr = document.createElement("tr");
+        const sev = Number(r.severidade) || 1;
+        const prob = Number(r.probabilidade) || 1;
+        const { score } = calculateRiskScore(sev, prob);
+        
+        const tdDesc = document.createElement("td");
+        tdDesc.textContent = r.descricao || "";
+        const tdSev = document.createElement("td");
+        tdSev.style.textAlign = "center";
+        tdSev.textContent = String(sev);
+        const tdProb = document.createElement("td");
+        tdProb.style.textAlign = "center";
+        tdProb.textContent = String(prob);
+        const tdScore = document.createElement("td");
+        tdScore.style.textAlign = "center";
+        tdScore.style.fontWeight = "700";
+        tdScore.textContent = String(score);
+        const tdMit = document.createElement("td");
+        tdMit.textContent = r.mitigacao || "—";
+        const tdResp = document.createElement("td");
+        tdResp.textContent = r.responsavel || "—";
+
+        tr.appendChild(tdDesc);
+        tr.appendChild(tdSev);
+        tr.appendChild(tdProb);
+        tr.appendChild(tdScore);
+        tr.appendChild(tdMit);
+        tr.appendChild(tdResp);
+        tbRisks.appendChild(tr);
+      });
+    }
+
+    // Links
+    const tbLinks = document.querySelector("#tableLinksPrint tbody");
+    tbLinks.innerHTML = "";
+    const links = Array.isArray(k.links) ? k.links : [];
+    if (links.length === 0) {
+      document.getElementById("boxLinksPrint").classList.add("hidden");
+    } else {
+      document.getElementById("boxLinksPrint").classList.remove("hidden");
+      links.forEach((l) => {
+        const tr = document.createElement("tr");
+        const tags = Array.isArray(l.tags) ? l.tags.join(", ") : (l.tags || "—");
+
+        const tdTit = document.createElement("td");
+        const stTit = document.createElement("strong");
+        stTit.textContent = l.titulo || "";
+        tdTit.appendChild(stTit);
+
+        const tdUrl = document.createElement("td");
+        tdUrl.style.wordBreak = "break-all";
+        tdUrl.textContent = l.url || "";
+
+        const tdCat = document.createElement("td");
+        tdCat.textContent = l.categoria || "outro";
+
+        const tdTags = document.createElement("td");
+        tdTags.textContent = tags;
+
+        tr.appendChild(tdTit);
+        tr.appendChild(tdUrl);
+        tr.appendChild(tdCat);
+        tr.appendChild(tdTags);
+        tbLinks.appendChild(tr);
+      });
+    }
+
+    // Data de geração
+    const now = new Date();
+    document.getElementById("pGeradoEm").textContent = `Gerado em ${now.toLocaleDateString("pt-BR")} às ${now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })} · Kaizen Hub`;
+  }
+
+  function togglePillar(id, isActive, name) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (isActive) {
+      el.className = "pillar-tag active";
+      el.textContent = `[✓] ${name}`;
+    } else {
+      el.className = "pillar-tag";
+      el.textContent = `[ ] ${name}`;
+    }
+  }
+
+  function formatStatus(status) {
+    const map = {
+      rascunho: "Rascunho",
+      em_andamento: "Em andamento",
+      concluido: "Concluído",
+      cancelado: "Cancelado"
+    };
+    return map[status] || "Em andamento";
+  }
+
+  function formatActionStatus(st) {
+    const map = {
+      nao_iniciada: "Não iniciada",
+      em_andamento: "Em andamento",
+      concluiuda: "Concluída",
+      concluida: "Concluída",
+      atrasada: "Atrasada"
+    };
+    return map[st] || "Não iniciada";
+  }
+
+  function escapeHtml(str) {
+    if (str == null) return "";
+    return String(str).replace(/[<>&"']/g, (c) => {
+      switch (c) {
+        case "<": return "&lt;";
+        case ">": return "&gt;";
+        case "&": return "&amp;";
+        case '"': return "&quot;";
+        case "'": return "&#39;";
+        default: return c;
+      }
+    });
+  }
+
+  loadKaizenData();
+</script>
+
+</body>
+</html>

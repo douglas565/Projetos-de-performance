@@ -1,0 +1,470 @@
+// ============================================================
+// js/kaizen-model.js — Modelo de Dados v2, Regras de Negócio e Migração
+// Compatível com navegador (ESM) e Node.js (node --test)
+// ============================================================
+
+/**
+ * Gera código único para o Kaizen no cliente: KZ-YYYYMMDD-XXXX
+ */
+export function generateKaizenCode(date = new Date()) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  const rand = Math.random().toString(36).substring(2, 6).toUpperCase().padStart(4, "0");
+  return `KZ-${y}${m}${d}-${rand}`;
+}
+
+/**
+ * Normaliza texto para busca (minúsculo, sem acentos/cedilha)
+ */
+export function normalizeString(str) {
+  if (typeof str !== "string") return "";
+  return str
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+}
+
+/**
+ * Extrai tokens únicos >= 3 caracteres para indexação
+ */
+export function extractTokens(text) {
+  if (!text) return [];
+  const normalized = normalizeString(String(text));
+  const words = normalized.split(/[^a-z0-9_-]+/);
+  const set = new Set();
+  for (const w of words) {
+    if (w.length >= 3 && !set.has(w)) {
+      set.add(w);
+    }
+  }
+  return Array.from(set);
+}
+
+/**
+ * Calcula B/C Ratio: benefício / custo (arredondado em 2 casas)
+ */
+export function calculateBcRatio(beneficio, custo) {
+  const b = Number(beneficio) || 0;
+  const c = Number(custo) || 0;
+  if (c <= 0) return null;
+  return Number((b / c).toFixed(2));
+}
+
+/**
+ * Calcula % de conclusão a partir das ações do plano
+ */
+export function calculatePercentualFromActions(acoes) {
+  if (!Array.isArray(acoes) || acoes.length === 0) return 0;
+  const concluidas = acoes.filter((a) => a && a.status === "concluida").length;
+  return Math.round((concluidas / acoes.length) * 100);
+}
+
+/**
+ * Calcula score de risco (severidade * probabilidade) e nível de criticidade
+ */
+export function calculateRiskScore(severidade, probabilidade) {
+  const sev = Math.min(4, Math.max(1, Number(severidade) || 1));
+  const prob = Math.min(4, Math.max(1, Number(probabilidade) || 1));
+  const score = sev * prob;
+  let nivel = "baixo"; // 1..4 (verde)
+  if (score >= 10) {
+    nivel = "alto"; // 10..16 (vermelho)
+  } else if (score >= 5) {
+    nivel = "medio"; // 5..9 (âmbar)
+  }
+  return { score, severidade: sev, probabilidade: prob, nivel };
+}
+
+/**
+ * Gera lista de palavras-chave para busca no Firestore (searchKeywords)
+ */
+export function generateSearchKeywords(kaizen) {
+  if (!kaizen) return [];
+  const tokenSet = new Set();
+
+  function addText(val) {
+    if (!val) return;
+    if (Array.isArray(val)) {
+      val.forEach(addText);
+      return;
+    }
+    extractTokens(val).forEach((t) => tokenSet.add(t));
+  }
+
+  addText(kaizen.codigo);
+  addText(kaizen.projeto);
+  addText(kaizen.area);
+  addText(kaizen.lider);
+  addText(kaizen.participantes);
+  addText(kaizen.areaNegocio);
+  addText(kaizen.tipo);
+  addText(kaizen.tipoBeneficio);
+  addText(kaizen.incomodo);
+  addText(kaizen.meta);
+  addText(kaizen.ownerNome);
+  addText(kaizen.ownerEmail);
+
+  // Palavras-chave dos links indexados
+  if (Array.isArray(kaizen.links)) {
+    for (const l of kaizen.links) {
+      if (l && l.indexado !== false) {
+        addText(l.titulo);
+        addText(l.descricao);
+        addText(l.categoria);
+        addText(l.tags);
+        if (typeof l.url === "string") {
+          try {
+            const parsed = new URL(l.url);
+            addText(parsed.pathname);
+          } catch {
+            addText(l.url);
+          }
+        }
+      }
+    }
+  }
+
+  // Palavras-chave das ações
+  if (Array.isArray(kaizen.acoes)) {
+    for (const a of kaizen.acoes) {
+      if (a) {
+        addText(a.descricao);
+        addText(a.responsavel);
+      }
+    }
+  }
+
+  // Limite razoável de tokens para não inflar o documento
+  return Array.from(tokenSet).sort().slice(0, 100);
+}
+
+/**
+ * Sincroniza listas de UIDs de compartilhamento a partir da lista `shares`
+ */
+export function syncSharingLists(shares) {
+  const safeShares = Array.isArray(shares) ? shares : [];
+  const viewersUids = [];
+  const editorsUids = [];
+
+  for (const s of safeShares) {
+    if (!s || !s.uid) continue;
+    if (s.role === "edit") {
+      if (!editorsUids.includes(s.uid)) editorsUids.push(s.uid);
+    } else {
+      if (!viewersUids.includes(s.uid)) viewersUids.push(s.uid);
+    }
+  }
+
+  const sharedWithUids = Array.from(new Set([...viewersUids, ...editorsUids]));
+  return { viewersUids, editorsUids, sharedWithUids, shares: safeShares };
+}
+
+/**
+ * Cria a estrutura padrão de um Kaizen v2 em branco
+ */
+export function createDefaultKaizen(user = {}) {
+  const today = new Date().toISOString().split("T")[0];
+  const uid = user.uid || "";
+  const email = user.email || "";
+  const nome = user.displayName || (email ? email.split("@")[0] : "");
+
+  return {
+    schemaVersion: 2,
+    rev: 1,
+    codigo: generateKaizenCode(),
+    projeto: "",
+    area: "",
+    data: today,
+    lider: nome,
+    participantes: [],
+    areaNegocio: "Operação",
+    tipo: "kaizen", // kaizen | performance
+    tipoBeneficio: null, // hard_saving | cost_avoidance
+    pilares: {
+      seguranca: false,
+      qualidade: false,
+      entrega: false,
+      lucratividade: false,
+      pessoas: false
+    },
+    incomodo: "",
+    causas: "",
+    meta: "",
+    monitoramento: "",
+    w2h: {
+      what: "",
+      where: "",
+      when: "",
+      who: "",
+      why: "",
+      how: "",
+      howMuch: ""
+    },
+    acoes: [],
+    padronizacao: "",
+    aprovacao: "",
+    aprovacaoStatus: "pendente", // pendente | aprovado | rejeitado
+    expansao: false,
+    expansaoArea: "",
+    beneficio: 0,
+    custo: 0,
+    bcRatio: null,
+    bcObs: "",
+    riscos: [],
+    links: [],
+    anexos: [],
+    status: "em_andamento", // rascunho | em_andamento | concluido | cancelado
+    percentual: 0,
+    visibilidade: "privado", // privado | compartilhado
+    ownerUid: uid,
+    ownerEmail: email,
+    ownerNome: nome,
+    viewersUids: [],
+    editorsUids: [],
+    sharedWithUids: [],
+    shares: [],
+    searchKeywords: [],
+    arquivado: false,
+    criadoEm: null,
+    criadoPor: uid,
+    atualizadoEm: null,
+    atualizadoPor: uid
+  };
+}
+
+/**
+ * Validação de campos do Kaizen
+ * isFinal = true se o usuário estiver concluindo o kaizen (status === 'concluido')
+ */
+export function validateKaizen(kaizen, isFinal = false) {
+  const errors = [];
+  if (!kaizen) {
+    return { valid: false, errors: ["Documento inexistente."] };
+  }
+
+  // Validação básica para qualquer salvamento
+  if (!kaizen.projeto || !kaizen.projeto.trim()) {
+    errors.push("O nome do projeto é obrigatório.");
+  }
+
+  // Validação condicional: benefício > 0 exige tipoBeneficio
+  const b = Number(kaizen.beneficio) || 0;
+  if (b > 0 && !kaizen.tipoBeneficio) {
+    errors.push("Informe o tipo de benefício (Hard Saving ou Cost Avoidance) para benefício maior que zero.");
+  }
+
+  // Se expansão horizontal estiver marcada, a área deve ser informada
+  if (kaizen.expansao && (!kaizen.expansaoArea || !kaizen.expansaoArea.trim())) {
+    errors.push("Informe a área/UO para expansão horizontal.");
+  }
+
+  // Validação rigorosa para conclusão
+  if (isFinal || kaizen.status === "concluido") {
+    if (!kaizen.area || !kaizen.area.trim()) errors.push("Informe a área/processo.");
+    if (!kaizen.data) errors.push("Informe a data do projeto.");
+    if (!kaizen.lider || !kaizen.lider.trim()) errors.push("Informe o líder do kaizen.");
+    if (!kaizen.areaNegocio) errors.push("Selecione a área de negócio.");
+    if (!kaizen.incomodo || !kaizen.incomodo.trim()) errors.push("Preencha o incômodo / oportunidade (bloco 1).");
+    if (!kaizen.causas || !kaizen.causas.trim()) errors.push("Preencha a análise das causas (bloco 2).");
+    if (!kaizen.meta || !kaizen.meta.trim()) errors.push("Preencha a meta / objetivo SMART (bloco 3).");
+
+    const w = kaizen.w2h || {};
+    if (!w.what || !w.what.trim()) errors.push("Preencha o 'What (O quê?)' no 5W2H.");
+    if (!w.how || !w.how.trim()) errors.push("Preencha o 'How (Como?)' no 5W2H.");
+
+    if (!Array.isArray(kaizen.acoes) || kaizen.acoes.length === 0) {
+      errors.push("O plano de ação deve conter ao menos 1 ação.");
+    } else {
+      const pendentes = kaizen.acoes.filter((a) => a && a.status !== "concluida");
+      if (pendentes.length > 0) {
+        errors.push("Para concluir o kaizen, todas as ações do plano devem estar marcadas como concluídas.");
+      }
+    }
+
+    if (!kaizen.padronizacao || !kaizen.padronizacao.trim()) {
+      errors.push("Preencha a padronização (bloco 6).");
+    }
+    if (!kaizen.aprovacao || !kaizen.aprovacao.trim()) {
+      errors.push("Informe o responsável pela aprovação (bloco 7).");
+    }
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors
+  };
+}
+
+/**
+ * Verifica permissão de leitura
+ */
+export function canUserRead(kaizen, user, userProfile) {
+  if (!user || !user.uid) return false;
+  if (userProfile && userProfile.role === "admin") return true;
+  if (!kaizen) return false;
+  if (kaizen.ownerUid === user.uid) return true;
+  if (Array.isArray(kaizen.sharedWithUids) && kaizen.sharedWithUids.includes(user.uid)) return true;
+  if (Array.isArray(kaizen.viewersUids) && kaizen.viewersUids.includes(user.uid)) return true;
+  if (Array.isArray(kaizen.editorsUids) && kaizen.editorsUids.includes(user.uid)) return true;
+  // Compatibilidade caso visibilidade esteja como 'compartilhado'
+  if (kaizen.visibilidade === "compartilhado") return true;
+  return false;
+}
+
+/**
+ * Verifica permissão de escrita/edição
+ * Viewer NUNCA edita!
+ */
+export function canUserEdit(kaizen, user, userProfile) {
+  if (!user || !user.uid) return false;
+  if (userProfile && userProfile.role === "admin") return true;
+  if (!kaizen) return false;
+  if (kaizen.ownerUid === user.uid) return true;
+  if (Array.isArray(kaizen.editorsUids) && kaizen.editorsUids.includes(user.uid)) return true;
+  return false;
+}
+
+/**
+ * Migra array de ações legado para formato v2
+ */
+export function migrateLegacyActions(legacyAcoes) {
+  if (!Array.isArray(legacyAcoes)) return [];
+  return legacyAcoes.map((a, idx) => {
+    if (!a) return null;
+    return {
+      id: a.id || `act-${idx + 1}-${Date.now().toString(36)}`,
+      ordem: Number(a.ordem) || idx + 1,
+      descricao: a.descricao || a.desc || "",
+      responsavel: a.responsavel || a.resp || "",
+      prazo: a.prazo || "",
+      status: a.status || "nao_iniciada",
+      concluidaEm: a.concluidaEm || (a.status === "concluida" ? a.prazo || null : null)
+    };
+  }).filter(Boolean);
+}
+
+/**
+ * Migra array de riscos legado para formato v2
+ */
+export function migrateLegacyRisks(legacyRiscos) {
+  if (!Array.isArray(legacyRiscos)) return [];
+  return legacyRiscos.map((r, idx) => {
+    if (!r) return null;
+    const sev = Math.min(4, Math.max(1, Number(r.severidade || r.sev) || 1));
+    const prob = Math.min(4, Math.max(1, Number(r.probabilidade || r.prob) || 1));
+    return {
+      id: r.id || `rsk-${idx + 1}-${Date.now().toString(36)}`,
+      descricao: r.descricao || r.desc || "",
+      severidade: sev,
+      probabilidade: prob,
+      score: sev * prob,
+      mitigacao: r.mitigacao || r.acao || "",
+      responsavel: r.responsavel || r.resp || ""
+    };
+  }).filter(Boolean);
+}
+
+/**
+ * Migra documento antigo (v1 web ou V6 Power Apps) para o schema Firestore v2
+ */
+export function migrateLegacyProject(legacy, user = {}) {
+  if (!legacy) return null;
+
+  const uid = user.uid || legacy.ownerUid || "";
+  const email = user.email || legacy.ownerEmail || legacy.OwnerEmail || "";
+  const nome = user.displayName || legacy.ownerNome || legacy.lider || (email ? email.split("@")[0] : "");
+
+  // Participantes: split por ponto e vírgula se for string
+  let participantes = [];
+  if (Array.isArray(legacy.participantes)) {
+    participantes = legacy.participantes;
+  } else if (typeof legacy.participantes === "string" || typeof legacy.Participantes === "string") {
+    const raw = legacy.participantes || legacy.Participantes;
+    participantes = raw.split(";").map((p) => p.trim()).filter(Boolean);
+  }
+
+  // Pilares
+  const pilares = {
+    seguranca: Boolean(legacy.pilares?.seguranca ?? legacy.pilar_seguranca ?? legacy.PilarSeguranca),
+    qualidade: Boolean(legacy.pilares?.qualidade ?? legacy.pilar_qualidade ?? legacy.PilarQualidade),
+    entrega: Boolean(legacy.pilares?.entrega ?? legacy.pilar_entrega ?? legacy.PilarEntrega),
+    lucratividade: Boolean(legacy.pilares?.lucratividade ?? legacy.pilar_lucratividade ?? legacy.PilarLucratividade),
+    pessoas: Boolean(legacy.pilares?.pessoas ?? legacy.pilar_pessoas ?? legacy.PilarPessoas)
+  };
+
+  // 5W2H
+  const w2h = {
+    what: legacy.w2h?.what ?? legacy.w_what ?? legacy.WWhat ?? "",
+    where: legacy.w2h?.where ?? legacy.w_where ?? legacy.WWhere ?? "",
+    when: legacy.w2h?.when ?? legacy.w_when ?? legacy.WWhen ?? "",
+    who: legacy.w2h?.who ?? legacy.w_who ?? legacy.WWho ?? "",
+    why: legacy.w2h?.why ?? legacy.w_why ?? legacy.WWhy ?? "",
+    how: legacy.w2h?.how ?? legacy.w_how ?? legacy.WHow ?? "",
+    howMuch: legacy.w2h?.howMuch ?? legacy.w_howmuch ?? legacy.WHowMuch ?? ""
+  };
+
+  const beneficio = Number(legacy.beneficio ?? legacy.Beneficio) || 0;
+  const custo = Number(legacy.custo ?? legacy.Custo) || 0;
+  const pct = Number(legacy.percentual ?? legacy.Percentual) || 0;
+
+  const acoes = migrateLegacyActions(legacy.acoes || legacy.Acoes);
+  const riscos = migrateLegacyRisks(legacy.riscos || legacy.Riscos);
+
+  const tipoRaw = String(legacy.tipo || legacy.Tipo || "kaizen").toLowerCase();
+  const tipo = tipoRaw.includes("performance") ? "performance" : "kaizen";
+
+  const sharing = syncSharingLists(legacy.shares || []);
+
+  const v2 = {
+    schemaVersion: 2,
+    rev: Number(legacy.rev) || 1,
+    codigo: legacy.codigo || generateKaizenCode(),
+    projeto: legacy.projeto || legacy.Projeto || "Projeto Migrado",
+    area: legacy.area || legacy.Area || "",
+    data: legacy.data || legacy.Data || new Date().toISOString().split("T")[0],
+    lider: legacy.lider || legacy.Lider || nome,
+    participantes,
+    areaNegocio: legacy.areaNegocio || legacy.AreaNegocio || "Operação",
+    tipo,
+    tipoBeneficio: legacy.tipoBeneficio || null,
+    pilares,
+    incomodo: legacy.incomodo || legacy.Incomodo || "",
+    causas: legacy.causas || legacy.Causas || "",
+    meta: legacy.meta || legacy.Meta || "",
+    monitoramento: legacy.monitoramento || legacy.Monitoramento || "",
+    w2h,
+    acoes,
+    padronizacao: legacy.padronizacao || legacy.Padronizacao || "",
+    aprovacao: legacy.aprovacao || legacy.Aprovacao || "",
+    aprovacaoStatus: legacy.aprovacaoStatus || "pendente",
+    expansao: Boolean(legacy.expansao ?? legacy.Expansao),
+    expansaoArea: legacy.expansaoArea || legacy.ExpansaoArea || "",
+    beneficio,
+    custo,
+    bcRatio: calculateBcRatio(beneficio, custo),
+    bcObs: legacy.bcObs || legacy.BCObs || "",
+    riscos,
+    links: Array.isArray(legacy.links) ? legacy.links : [],
+    anexos: [],
+    status: legacy.status || (pct >= 100 ? "concluido" : "em_andamento"),
+    percentual: pct,
+    visibilidade: legacy.visibilidade || "privado",
+    ownerUid: uid,
+    ownerEmail: email,
+    ownerNome: nome,
+    viewersUids: sharing.viewersUids,
+    editorsUids: sharing.editorsUids,
+    sharedWithUids: sharing.sharedWithUids,
+    shares: sharing.shares,
+    arquivado: Boolean(legacy.arquivado),
+    criadoEm: legacy.criadoEm || legacy.CriadoEm || null,
+    criadoPor: legacy.criadoPor || uid,
+    atualizadoEm: legacy.atualizadoEm || legacy.AtualizadoEm || null,
+    atualizadoPor: legacy.atualizadoPor || uid
+  };
+
+  v2.searchKeywords = generateSearchKeywords(v2);
+  return v2;
+}

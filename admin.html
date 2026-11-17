@@ -1,149 +1,251 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="light">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Painel Executivo · Kaizen Hub</title>
-<link rel="stylesheet" href="style.css">
-<link rel="stylesheet" href="admin.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel Executivo · Kaizen Hub v2</title>
+  <link rel="stylesheet" href="style.css?v=20261117-01">
+  <link rel="stylesheet" href="admin.css?v=20261117-01">
 </head>
 <body>
 
 <header id="topbar">
   <div class="brand">
-    <span class="logo">K</span>
+    <span class="logo" aria-hidden="true">K</span>
     <div>
-      <strong>Portfólio de Projetos</strong>
-      <small>Painel executivo · administrador</small>
+      <strong>Painel Executivo</strong>
+      <small>Administração · Kaizen Hub</small>
     </div>
   </div>
   <div class="topbar-right">
-    <a href="index.html" class="btn ghost">← Meus projetos</a>
+    <button type="button" id="btnToggleTheme" class="btn ghost small" aria-label="Alternar tema">🌙 Tema escuro</button>
+    <a href="index.html?v=20261117-01" class="btn ghost small">← Meus projetos</a>
     <span id="userChip" class="chip"></span>
-    <button id="btnLogout" class="btn ghost">Sair</button>
+    <button type="button" id="btnLogout" class="btn ghost small">Sair</button>
   </div>
 </header>
 
-<!-- BLOQUEIO -->
+<!-- ACESSO NEGADO -->
 <main id="viewDenied" class="denied hidden">
-  <div class="login-card">
-    <h1>Acesso restrito</h1>
-    <p class="muted" id="deniedMsg">Este painel é exclusivo para administradores.</p>
-    <a href="index.html" class="btn primary block">Voltar ao hub</a>
+  <div class="login-card" style="text-align:center;max-width:480px">
+    <h1 style="color:var(--danger)">Acesso restrito</h1>
+    <p class="muted" id="deniedMsg" style="margin:12px 0 20px">
+      Este painel é exclusivo para administradores.
+    </p>
+    <a href="index.html?v=20261117-01" class="btn primary block">Voltar ao hub</a>
   </div>
 </main>
 
+<!-- CARREGANDO -->
 <main id="viewLoading" class="denied">
-  <p class="muted">Carregando portfólio...</p>
+  <div style="text-align:center">
+    <div class="spinner" style="margin:0 auto 12px"></div>
+    <p class="muted">Carregando portfólio...</p>
+  </div>
 </main>
 
-<!-- DASHBOARD -->
+<!-- DASHBOARD E ADMINISTRAÇÃO -->
 <main id="viewAdmin" class="hidden container">
 
-  <div class="hub-head">
-    <div>
-      <h2>Dashboard executivo</h2>
-      <p class="muted">Visão consolidada de todos os projetos · atualização automática</p>
+  <!-- ABAS DO PAINEL -->
+  <div class="admin-tabs" role="tablist">
+    <button type="button" class="admin-tab active" data-tab="dashboard" role="tab" aria-selected="true">📊 Dashboard</button>
+    <button type="button" class="admin-tab" data-tab="users" role="tab" aria-selected="false">👥 Usuários e Aprovações</button>
+    <button type="button" class="admin-tab" data-tab="projects" role="tab" aria-selected="false">📁 Todos os Kaizens</button>
+    <button type="button" class="admin-tab" data-tab="config" role="tab" aria-selected="false">⚙️ Configurações</button>
+  </div>
+
+  <!-- ===== ABA 1: DASHBOARD ===== -->
+  <section id="tabDashboard" class="tab-content">
+    <div class="hub-head">
+      <div>
+        <h2>Visão executiva do portfólio</h2>
+        <p class="muted">Indicadores consolidados de todos os projetos de melhoria contínua</p>
+      </div>
+      <div class="hub-actions">
+        <select id="fArea"><option value="">Todas as áreas</option></select>
+        <select id="fTipo">
+          <option value="">Todos os tipos</option>
+          <option value="kaizen">Kaizen</option>
+          <option value="performance">Performance</option>
+        </select>
+        <button type="button" id="btnExport" class="btn small ghost">Exportar CSV</button>
+      </div>
     </div>
-    <div class="hub-actions">
-      <select id="fArea"><option value="">Todas as áreas</option></select>
-      <select id="fTipo">
-        <option value="">Todos os tipos</option>
-        <option>Kaizen</option>
-        <option>Performance</option>
-      </select>
-      <button id="btnExport" class="btn ghost">Exportar CSV</button>
-      <button id="btnAdmins" class="btn primary">Administradores</button>
+
+    <!-- KPIs -->
+    <div class="kpis">
+      <div class="kpi"><small>PROJETOS</small><strong id="kProj">0</strong></div>
+      <div class="kpi"><small>CONCLUSÃO MÉDIA</small><strong id="kConc">0%</strong></div>
+      <div class="kpi"><small>HARD SAVING TOTAL</small><strong id="kHard">R$ 0,00</strong></div>
+      <div class="kpi"><small>COST AVOIDANCE</small><strong id="kCA">R$ 0,00</strong></div>
     </div>
-  </div>
 
-  <!-- KPIs -->
-  <div class="kpis">
-    <div class="kpi"><small>PROJETOS</small><strong id="kProj">0</strong></div>
-    <div class="kpi"><small>CONCLUSÃO MÉDIA</small><strong id="kConc">0%</strong></div>
-    <div class="kpi"><small>INVESTIMENTO TOTAL</small><strong id="kInv">R$ 0,00</strong></div>
-    <div class="kpi"><small>BENEFÍCIO FINANCEIRO</small><strong id="kBen">R$ 0,00</strong></div>
-  </div>
+    <!-- Resumo de investimento e retorno -->
+    <div class="kpis kpis-sec">
+      <div class="kpi"><small>INVESTIMENTO TOTAL</small><strong id="kInv">R$ 0,00</strong></div>
+      <div class="kpi"><small>BENEFÍCIO TOTAL</small><strong id="kBen">R$ 0,00</strong></div>
+      <div class="kpi"><small>B/C MÉDIO PONDERADO</small><strong id="kBcAvg">—</strong></div>
+      <div class="kpi"><small>PENDENTES DE APROVAÇÃO</small><strong id="kPending">0</strong></div>
+    </div>
 
-  <!-- GRÁFICOS -->
-  <div class="cols2">
+    <!-- RESUMO POR ÁREA -->
     <section class="card">
-      <h4>Conclusão média por área</h4>
-      <div class="chart-box"><canvas id="chConclusao"></canvas></div>
+      <h4>Resumo por área de negócio</h4>
+      <div class="table-wrap">
+        <table id="tbArea" class="data-table">
+          <thead>
+            <tr>
+              <th scope="col">Área de negócio</th>
+              <th scope="col" class="num">Projetos</th>
+              <th scope="col" class="num">Conclusão média</th>
+              <th scope="col" class="num">Hard Saving</th>
+              <th scope="col" class="num">Cost Avoidance</th>
+              <th scope="col" class="num">Investimento</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+          <tfoot></tfoot>
+        </table>
+      </div>
     </section>
-    <section class="card">
-      <h4>Projetos por área</h4>
-      <div class="chart-box"><canvas id="chProjetos"></canvas></div>
-    </section>
-  </div>
 
-  <div class="cols2">
+    <!-- GRÁFICO DE BARRAS NATIVO -->
     <section class="card">
       <h4>Benefício financeiro por área (R$)</h4>
-      <div class="chart-box"><canvas id="chBeneficio"></canvas></div>
+      <div id="chartBarras" class="native-chart"></div>
     </section>
+  </section>
+
+  <!-- ===== ABA 2: USUÁRIOS ===== -->
+  <section id="tabUsers" class="tab-content hidden">
+    <div class="hub-head">
+      <div>
+        <h2>Gestão de usuários</h2>
+        <p class="muted">Aprovação de cadastros, bloqueio de acesso e permissões de administrador</p>
+      </div>
+      <div class="hub-actions">
+        <input type="search" id="searchUsers" placeholder="Buscar nome ou e-mail...">
+        <select id="filterUserStatus">
+          <option value="">Todos os status</option>
+          <option value="pending">⏳ Pendentes</option>
+          <option value="active">✓ Ativos</option>
+          <option value="blocked">🚫 Bloqueados</option>
+        </select>
+      </div>
+    </div>
+
     <section class="card">
-      <h4>Investimento × Benefício por área (R$)</h4>
-      <div class="chart-box"><canvas id="chInvBen"></canvas></div>
+      <div class="table-wrap">
+        <table id="tbUsers" class="data-table">
+          <thead>
+            <tr>
+              <th scope="col">Nome</th>
+              <th scope="col">E-mail</th>
+              <th scope="col" style="width:120px">Status</th>
+              <th scope="col" style="width:110px">Papel</th>
+              <th scope="col" style="width:140px">Cadastro</th>
+              <th scope="col" style="width:300px">Ações</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="hint" style="margin-top:10px">
+        Novos cadastros entram como <strong>Pending</strong>. Aprovar concede acesso de leitura e edição aos próprios projetos.
+        Somente administradores visualizam todos os Kaizens.
+      </p>
     </section>
-  </div>
-
-  <!-- RESUMO POR ÁREA -->
-  <section class="card">
-    <h4>Resumo por área</h4>
-    <div class="table-wrap">
-      <table id="tbArea">
-        <thead><tr>
-          <th>Área de negócio</th><th>Projetos</th><th>Conclusão média</th>
-          <th>Investimento</th><th>Benefício</th>
-        </tr></thead>
-        <tbody></tbody>
-        <tfoot></tfoot>
-      </table>
-    </div>
   </section>
 
-  <!-- TODOS OS PROJETOS -->
-  <section class="card">
-    <div class="card-head">
-      <h4>Acompanhamento dos projetos</h4>
-      <input type="search" id="fBusca" placeholder="Buscar projeto, líder...">
+  <!-- ===== ABA 3: PROJETOS ===== -->
+  <section id="tabProjects" class="tab-content hidden">
+    <div class="hub-head">
+      <div>
+        <h2>Todos os Kaizens</h2>
+        <p class="muted">Visão global e auditoria de todos os projetos registrados</p>
+      </div>
+      <div class="hub-actions">
+        <input type="search" id="searchProjectsAdmin" placeholder="Buscar projeto, líder, código...">
+        <label class="inline-check" style="margin:0;font-size:12px">
+          <input type="checkbox" id="showArchived"> Mostrar arquivados
+        </label>
+      </div>
     </div>
-    <div class="table-wrap">
-      <table id="tbProjetos">
-        <thead><tr>
-          <th style="width:32px"></th>
-          <th>Área</th><th>Nome</th><th>% concluída</th><th>Atribuída a</th>
-          <th>Investimento</th><th>Tipo</th><th>Benef. Financ. (R$)</th>
-          <th>Ações</th>
-        </tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-    <p class="hint">Clique na seta para expandir o plano de ação do projeto.</p>
+
+    <section class="card">
+      <div class="table-wrap">
+        <table id="tbProjects" class="data-table">
+          <thead>
+            <tr>
+              <th scope="col">Código</th>
+              <th scope="col">Projeto</th>
+              <th scope="col">Área de Negócio</th>
+              <th scope="col">Proprietário</th>
+              <th scope="col" class="num" style="width:90px">% concl.</th>
+              <th scope="col" style="width:100px">Benefício</th>
+              <th scope="col" class="num" style="width:130px">Valor (R$)</th>
+              <th scope="col" class="num" style="width:60px">rev</th>
+              <th scope="col" style="width:120px">Ações</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
   </section>
+
+  <!-- ===== ABA 4: CONFIGURAÇÕES ===== -->
+  <section id="tabConfig" class="tab-content hidden">
+    <div class="hub-head">
+      <div>
+        <h2>Configurações do sistema</h2>
+        <p class="muted">Parâmetros globais salvos em config/app no Firestore</p>
+      </div>
+    </div>
+
+    <section class="card">
+      <h4>Cadastro e verificação</h4>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:12px">
+        <label>Modo de cadastro
+          <select id="cfgSignupMode">
+            <option value="approval">Aprovação manual (recomendado)</option>
+            <option value="auto">Automático (acesso imediato)</option>
+          </select>
+        </label>
+        <label>Exigir e-mail verificado para gravar
+          <select id="cfgRequireEmail">
+            <option value="true">Sim (recomendado)</option>
+            <option value="false">Não (plano B operacional)</option>
+          </select>
+        </label>
+      </div>
+      <button type="button" id="btnSaveConfig" class="btn primary" style="margin-top:10px">Salvar configurações</button>
+      <p id="configMsg" class="msg"></p>
+    </section>
+
+    <section class="card">
+      <h4>Informações técnicas</h4>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;font-size:13px;margin-top:12px">
+        <div><small class="muted">Versão do app</small><br><strong id="infoVersion">—</strong></div>
+        <div><small class="muted">Projeto Firebase</small><br><strong>projeto-de-performance-bb964</strong></div>
+        <div><small class="muted">Schema dos dados</small><br><strong>v2 (kaizens)</strong></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h4>Manutenção</h4>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px">
+        <button type="button" id="btnCheckVersion" class="btn ghost">Verificar versão publicada</button>
+      </div>
+      <p id="versionMsg" class="hint" style="margin-top:8px"></p>
+    </section>
+  </section>
+
 </main>
 
-<!-- MODAL ADMINISTRADORES -->
-<div id="modalAdmins" class="modal hidden">
-  <div class="modal-box">
-    <div class="card-head">
-      <h4>Administradores do portfólio</h4>
-      <button id="btnCloseAdmins" class="rm">✕</button>
-    </div>
-    <p class="hint">Somente e-mails desta lista acessam o painel executivo.</p>
-    <ul id="adminList" class="admin-list"></ul>
-    <div class="add-admin">
-      <input type="email" id="newAdmin" placeholder="nome@engie.com">
-      <button id="btnAddAdmin" class="btn primary">Adicionar</button>
-    </div>
-    <p id="adminMsg" class="msg"></p>
-  </div>
-</div>
+<div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
-<div id="toast" class="toast hidden"></div>
-
-<script type="module" src="admin.js"></script>
+<script type="module" src="admin.js?v=20261117-01"></script>
 </body>
 </html>

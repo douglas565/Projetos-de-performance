@@ -3,8 +3,8 @@
 //  Firebase Console > Configurações do projeto > Seus apps > Web
 // ============================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getAuth, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { initializeFirestore, memoryLocalCache } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDqBT_XjRAZ9wRwCs--hnFmX6YP3owIT14",
@@ -16,6 +16,7 @@ const firebaseConfig = {
   measurementId: "G-LNT0W9GT4J"
 };
 
-const app = initializeApp(firebaseConfig);
+export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+setPersistence(auth, browserLocalPersistence).catch(() => {});
+export const db = initializeFirestore(app, { localCache: memoryLocalCache() });

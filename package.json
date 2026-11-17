@@ -1,0 +1,9 @@
+{
+  "name": "kaizen-hub",
+  "version": "2.0.0",
+  "description": "Kaizen Hub v2 — Gestão de projetos de melhoria contínua",
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}

@@ -1,20 +1,29 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Kaizen Hub — gestão de projetos de melhoria contínua com formulário A3 Standard Kaizen.">
-  <meta name="theme-color" content="#0b7285">
+  <meta name="description" content="Kaizen Hub v2 — Gestão e execução de projetos de melhoria contínua (Standard Kaizen SOL-FR-0013).">
+  <meta name="theme-color" content="#0A66FF">
   <title>Kaizen Hub · Gestão de Projetos</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=20261117-01">
 </head>
 <body>
 
 <noscript>
-  <p style="padding:16px;text-align:center">
-    Este aplicativo requer JavaScript habilitado para funcionar.
-  </p>
+  <div style="padding:24px;text-align:center;background:#fff;border-bottom:2px solid #e04141">
+    <h3>JavaScript necessário</h3>
+    <p>O Kaizen Hub requer JavaScript habilitado para autenticação e sincronização com o banco.</p>
+  </div>
 </noscript>
+
+<!-- BANNER OFFLINE (FIXO) -->
+<aside id="offlineBanner" class="banner-offline hidden" role="alert" aria-live="assertive">
+  <div class="banner-content">
+    <span>⚠️ <strong>Sem conexão.</strong> Suas alterações não estão sendo salvas no servidor.</span>
+    <button type="button" id="btnRetryOffline" class="btn small">Tentar salvar agora</button>
+  </div>
+</aside>
 
 <!-- ========== TOPO ========== -->
 <header id="topbar" class="hidden">
@@ -26,19 +35,21 @@
     </div>
   </div>
   <div class="topbar-right">
+    <button type="button" id="btnToggleTheme" class="btn ghost small" aria-label="Alternar tema">🌙 Tema escuro</button>
     <span id="saveStatus" class="save-status" role="status" aria-live="polite"></span>
     <span id="userChip" class="chip"></span>
-    <a href="admin.html" id="linkAdmin" class="btn ghost hidden">Painel executivo</a>
-    <button type="button" id="btnLogout" class="btn ghost">Sair</button>
-    </div>
+    <button type="button" id="btnMigrate" class="btn ghost small" title="Importar projetos da versão anterior">Migrar meus kaizens</button>
+    <a href="admin.html?v=20261117-01" id="linkAdmin" class="btn ghost small hidden">Painel executivo</a>
+    <button type="button" id="btnLogout" class="btn ghost small">Sair</button>
+  </div>
 </header>
 
-<!-- ========== VIEW 1: LOGIN ========== -->
+<!-- ========== VIEW 1: LOGIN / CADASTRO ========== -->
 <main id="viewLogin" class="login-wrap">
   <div class="login-card">
     <div class="login-brand"><span class="logo big" aria-hidden="true">K</span></div>
     <h1>Kaizen Hub</h1>
-    <p class="muted">Acesse para gerenciar seus projetos de melhoria contínua.</p>
+    <p class="muted">STANDARD KAIZEN SOL-FR-0013</p>
 
     <div class="tabs" role="tablist">
       <button type="button" class="tab active" data-tab="signin" role="tab" aria-selected="true">Entrar</button>
@@ -46,70 +57,147 @@
     </div>
 
     <form id="formAuth" autocomplete="on" novalidate>
-      <label for="email">E-mail
-        <input type="email" id="email" name="email" required
-               autocomplete="email" placeholder="nome@empresa.com">
-      </label>
-
-      <label for="password">Senha
-        <input type="password" id="password" name="password" required minlength="6"
-               autocomplete="current-password" placeholder="mínimo 6 caracteres">
+      <label for="email">E-mail corporativo
+        <input type="email" id="email" name="email" required autocomplete="email" placeholder="nome@empresa.com">
       </label>
 
       <label id="nameField" class="hidden" for="displayName">Nome completo
-        <input type="text" id="displayName" name="displayName"
-               autocomplete="name" placeholder="Seu nome">
+        <input type="text" id="displayName" name="displayName" autocomplete="name" placeholder="Seu nome completo">
+      </label>
+
+      <label for="password">Senha
+        <input type="password" id="password" name="password" required minlength="8" autocomplete="current-password" placeholder="mínimo 8 caracteres">
+        <small class="hint" id="passHint">Mínimo 8 caracteres, com letra e número.</small>
+      </label>
+
+      <label id="confirmPassField" class="hidden" for="confirmPassword">Confirmar senha
+        <input type="password" id="confirmPassword" name="confirmPassword" autocomplete="new-password" placeholder="repita sua senha">
       </label>
 
       <button type="submit" id="btnAuth" class="btn primary block">Entrar</button>
       <button type="button" id="btnReset" class="btn link">Esqueci minha senha</button>
       <p id="authMsg" class="msg" role="alert" aria-live="assertive"></p>
     </form>
+
+    <div class="login-footer">
+      <span class="muted" id="loginVersion">v2.0.0 (build 20261117-01)</span>
+    </div>
   </div>
 </main>
 
-<!-- ========== VIEW 2: HUB ========== -->
+<!-- ========== VIEW 1.5: AGUARDANDO APROVAÇÃO ========== -->
+<main id="viewPending" class="denied hidden">
+  <div class="login-card" style="text-align:center">
+    <div style="font-size:42px;margin-bottom:12px">⏳</div>
+    <h2>Aguardando aprovação</h2>
+    <p class="muted" style="margin:12px 0 18px">
+      Sua conta foi criada com sucesso! Para acessar o Kaizen Hub, um administrador precisa aprovar o seu cadastro.
+    </p>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button type="button" id="btnCheckApproval" class="btn primary block">Verificar de novo</button>
+      <button type="button" id="btnPendingLogout" class="btn ghost block">Sair</button>
+    </div>
+  </div>
+</main>
+
+<!-- ========== VIEW 1.6: CONTA BLOQUEADA ========== -->
+<main id="viewBlocked" class="denied hidden">
+  <div class="login-card" style="text-align:center">
+    <div style="font-size:42px;margin-bottom:12px">🚫</div>
+    <h2 style="color:var(--danger)">Acesso desativado</h2>
+    <p class="muted" style="margin:12px 0 18px">
+      Esta conta foi bloqueada ou desativada. Fale com o administrador da sua área para mais informações.
+    </p>
+    <button type="button" id="btnBlockedLogout" class="btn ghost block">Sair</button>
+  </div>
+</main>
+
+<!-- ========== VIEW 2: HUB DE KAIZENS ========== -->
 <main id="viewHub" class="hidden container">
   <div class="hub-head">
     <div>
-      <h2>Meus projetos</h2>
-      <p class="muted" id="hubCount">—</p>
+      <h2>Projetos Kaizen</h2>
+      <p class="muted" id="hubStats">Carregando indicadores...</p>
     </div>
     <div class="hub-actions">
-      <label class="sr-only" for="searchProjects">Buscar projeto</label>
-      <input type="search" id="searchProjects" placeholder="Buscar projeto...">
-      <button type="button" id="btnNewProject" class="btn primary">+ Novo projeto Kaizen</button>
+      <button type="button" id="btnNewProject" class="btn primary">+ Novo Kaizen</button>
+    </div>
+  </div>
+
+  <!-- Barra de Filtros e Busca -->
+  <div class="card hub-filter-bar">
+    <div class="filter-inputs">
+      <label class="filter-label" for="searchProjects">Busca
+        <input type="search" id="searchProjects" placeholder="Buscar por código, título, líder, tag, link...">
+      </label>
+      <label class="filter-label" for="filterArea">Área
+        <select id="filterArea">
+          <option value="">Todas as áreas</option>
+        </select>
+      </label>
+      <label class="filter-label" for="filterTipo">Tipo
+        <select id="filterTipo">
+          <option value="">Todos os tipos</option>
+          <option value="kaizen">Kaizen</option>
+          <option value="performance">Performance</option>
+        </select>
+      </label>
+      <label class="filter-label" for="filterBeneficio">Benefício
+        <select id="filterBeneficio">
+          <option value="">Todos os benefícios</option>
+          <option value="hard_saving">Hard Saving (HS)</option>
+          <option value="cost_avoidance">Cost Avoidance (CA)</option>
+        </select>
+      </label>
+      <label class="filter-label" for="filterStatus">Status
+        <select id="filterStatus">
+          <option value="">Todos os status</option>
+          <option value="rascunho">Rascunho</option>
+          <option value="em_andamento">Em andamento</option>
+          <option value="concluido">Concluído</option>
+          <option value="cancelado">Cancelado</option>
+        </select>
+      </label>
+      <label class="filter-label inline-check" style="margin-top:20px;cursor:pointer">
+        <input type="checkbox" id="filterMine"> Só meus projetos
+      </label>
     </div>
   </div>
 
   <div id="projectGrid" class="grid"></div>
 
   <div id="emptyState" class="empty hidden">
-    <h3>Nenhum projeto ainda</h3>
-    <p>Crie seu primeiro Kaizen e comece a preencher — tudo é salvo automaticamente.</p>
+    <h3>Nenhum projeto encontrado</h3>
+    <p>Crie um novo projeto Kaizen ou ajuste os filtros acima.</p>
     <button type="button" id="btnFirstProject" class="btn primary">+ Criar primeiro projeto</button>
   </div>
 </main>
 
 <!-- ========== VIEW 3: EDITOR KAIZEN ========== -->
 <main id="viewProject" class="hidden container">
-  <div class="proj-head">
-    <button type="button" id="btnBack" class="btn ghost">← Voltar ao hub</button>
+  <!-- Sub-header Sticky -->
+  <div class="proj-head sticky-subhead">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <button type="button" id="btnBack" class="btn ghost small">← Hub</button>
+      <span class="proj-title-bar" id="editorKaizenTitle">Sem título</span>
+      <span class="pill" id="editorStatusPill">Em andamento</span>
+    </div>
     <div class="proj-head-right">
-      <span class="pill" id="pillUpdated"></span>
-      <button type="button" id="btnPrint" class="btn ghost">Imprimir / PDF</button>
-      <button type="button" id="btnDelete" class="btn danger">Excluir</button>
+      <span id="editorSaveStatus" class="save-status" role="status" aria-live="polite"></span>
+      <button type="button" id="btnShare" class="btn ghost small">👥 Compartilhar</button>
+      <button type="button" id="btnPrint" class="btn ghost small">🖨️ Imprimir / PDF</button>
+      <button type="button" id="btnDelete" class="btn danger small">Excluir</button>
     </div>
   </div>
 
   <form id="kaizenForm" class="kaizen">
 
-    <!-- Cabeçalho A3 -->
+    <!-- Cabeçalho A3 Standard Kaizen -->
     <section class="card header-card">
       <div class="std-head">
         <div>
           <h3>STANDARD KAIZEN</h3>
-          <small>SOL-FR-0013 Rev00</small>
+          <small class="muted">SOL-FR-0013 Rev00</small>
         </div>
         <fieldset class="pillars">
           <legend class="sr-only">Pilares impactados</legend>
@@ -122,34 +210,61 @@
       </div>
 
       <div class="grid-4">
-        <label>PROJETO
-          <input type="text" data-f="projeto" placeholder="Nome do projeto">
+        <label>CÓDIGO DO KAIZEN
+          <input type="text" data-f="codigo" readonly tabindex="-1">
         </label>
-        <label>PROCESSO / ÁREA
+        <label>PROJETO *
+          <input type="text" data-f="projeto" required placeholder="Nome do projeto">
+        </label>
+        <label>PROCESSO / ÁREA *
           <input type="text" data-f="area" placeholder="Local/Área da melhoria">
         </label>
-        <label>DATA
+        <label>DATA *
           <input type="date" data-f="data">
         </label>
-        <label>LÍDER DO KAIZEN
+
+        <label>LÍDER DO KAIZEN *
           <input type="text" data-f="lider" placeholder="Responsável">
         </label>
-        <label class="span2">PARTICIPANTES
-          <input type="text" data-f="participantes" placeholder="Conectado ao plano de ação">
+        <label class="span2">PARTICIPANTES (separados por ponto e vírgula)
+          <input type="text" data-f="participantes" placeholder="Ex.: Ana Souza; Carlos Lima">
         </label>
-        <label>ÁREA DE NEGÓCIO
+        <label>ÁREA DE NEGÓCIO *
           <select data-f="areaNegocio">
-            <option value="">—</option>
+            <option value="">— Selecione —</option>
             <option>Operação</option>
             <option>DAF</option>
             <option>EO</option>
             <option>H&amp;S</option>
             <option>Jurídico e Ética</option>
             <option>P&amp;C</option>
+            <option>TI / Digital</option>
+            <option>Engenharia</option>
+          </select>
+        </label>
+
+        <label>TIPO DE PROJETO
+          <select data-f="tipo">
+            <option value="kaizen">Kaizen</option>
+            <option value="performance">Performance</option>
+          </select>
+        </label>
+        <label>STATUS DO KAIZEN
+          <select data-f="status">
+            <option value="rascunho">Rascunho</option>
+            <option value="em_andamento">Em andamento</option>
+            <option value="concluido">Concluído</option>
+            <option value="cancelado">Cancelado</option>
           </select>
         </label>
         <label>% CONCLUÍDA
           <input type="number" data-f="percentual" min="0" max="100" step="5" placeholder="0">
+        </label>
+        <label>VISIBILIDADE
+          <select data-f="visibilidade">
+            <option value="privado">Privado (somente eu e compartilhados)</option>
+            <option value="compartilhado">Compartilhado (hub geral)</option>
+          </select>
         </label>
       </div>
     </section>
@@ -157,98 +272,114 @@
     <!-- Blocos 1, 3 e 5 -->
     <div class="cols3">
       <section class="card">
-        <h4>1. Incômodo / Oportunidade</h4>
+        <h4>1. Incômodo / Oportunidade *</h4>
         <p class="hint">Claro, conciso e mensurável. Inclua números quando possível.</p>
         <label class="sr-only" for="fIncomodo">Incômodo ou oportunidade</label>
-        <textarea id="fIncomodo" data-f="incomodo" rows="8"></textarea>
+        <textarea id="fIncomodo" data-f="incomodo" rows="7" placeholder="Descreva a oportunidade de melhoria..."></textarea>
       </section>
+
       <section class="card">
-        <h4>3. Meta / Objetivo / Estado futuro</h4>
+        <h4>3. Meta / Objetivo / Estado futuro *</h4>
         <p class="hint">Meta SMART: o que, quanto e até quando.</p>
         <label class="sr-only" for="fMeta">Meta</label>
-        <textarea id="fMeta" data-f="meta" rows="8"></textarea>
+        <textarea id="fMeta" data-f="meta" rows="7" placeholder="Ex.: Reduzir refugo de 4,2% para 1,5% até 31/12..."></textarea>
       </section>
+
       <section class="card">
         <h4>5. Monitoramento e conclusões</h4>
         <p class="hint">Evidências, marcos e resultados após as ações.</p>
         <label class="sr-only" for="fMonit">Monitoramento</label>
-        <textarea id="fMonit" data-f="monitoramento" rows="8"></textarea>
+        <textarea id="fMonit" data-f="monitoramento" rows="7" placeholder="Acompanhamento semanal, indicadores..."></textarea>
       </section>
     </div>
 
-    <!-- Bloco 2 + 5W2H -->
+    <!-- Bloco 2 + Ferramenta 5W2H -->
     <div class="cols2">
       <section class="card">
-        <h4>2. Análise das causas / Estado atual</h4>
-        <p class="hint">5 porquês, Ishikawa (4M), Pareto, etc.</p>
+        <h4>2. Análise das causas / Estado atual *</h4>
+        <p class="hint">5 porquês, Ishikawa (4M), Pareto, diagrama de causa e efeito.</p>
         <label class="sr-only" for="fCausas">Análise das causas</label>
-        <textarea id="fCausas" data-f="causas" rows="7"></textarea>
+        <textarea id="fCausas" data-f="causas" rows="7" placeholder="Causas raízes identificadas..."></textarea>
       </section>
+
       <section class="card">
         <h4>Ferramenta 5W2H</h4>
         <div class="w5h2">
-          <label>What (O quê?)<input type="text" data-f="w_what"></label>
-          <label>Where (Onde?)<input type="text" data-f="w_where"></label>
-          <label>When (Quando?)<input type="text" data-f="w_when"></label>
-          <label>Who (Quem?)<input type="text" data-f="w_who"></label>
-          <label>Why (Por quê?)<input type="text" data-f="w_why"></label>
-          <label>How (Como?)<input type="text" data-f="w_how"></label>
-          <label>How Much (Quanto?)<input type="text" data-f="w_howmuch"></label>
+          <label>What (O quê?) *<input type="text" data-f="w_what" placeholder="O que será feito"></label>
+          <label>Where (Onde?)<input type="text" data-f="w_where" placeholder="Local"></label>
+          <label>When (Quando?)<input type="text" data-f="w_when" placeholder="Prazo geral"></label>
+          <label>Who (Quem?)<input type="text" data-f="w_who" placeholder="Responsável"></label>
+          <label>Why (Por quê?)<input type="text" data-f="w_why" placeholder="Justificativa"></label>
+          <label>How (Como?) *<input type="text" data-f="w_how" placeholder="Método"></label>
+          <label class="span2">How Much (Quanto?)<input type="text" data-f="w_howmuch" placeholder="Custo estimado"></label>
         </div>
       </section>
     </div>
 
-    <!-- Bloco 4: plano de ação -->
+    <!-- Bloco 4: Plano de Ação (Cronograma Ilimitado) -->
     <section class="card">
       <div class="card-head">
-        <h4>4. Plano de ação (cronograma)</h4>
-        <button type="button" id="btnAddAction" class="btn small">+ Adicionar ação</button>
+        <div>
+          <h4>4. Plano de ação (cronograma) *</h4>
+          <p class="hint">Adicione as ações necessárias para atingir a meta (ações ilimitadas).</p>
+        </div>
+        <button type="button" id="btnAddAction" class="btn small primary">+ Adicionar ação</button>
       </div>
+
       <div class="table-wrap">
         <table id="actionTable">
           <caption class="sr-only">Plano de ação do projeto</caption>
           <thead>
             <tr>
-              <th scope="col" style="width:48px">#</th>
+              <th scope="col" style="width:40px">#</th>
               <th scope="col">Ação</th>
-              <th scope="col" style="width:160px">Resp.</th>
-              <th scope="col" style="width:150px">Prazo</th>
+              <th scope="col" style="width:160px">Responsável</th>
+              <th scope="col" style="width:140px">Prazo</th>
               <th scope="col" style="width:140px">Status</th>
-              <th scope="col" style="width:48px"><span class="sr-only">Remover</span></th>
+              <th scope="col" style="width:40px"><span class="sr-only">Remover</span></th>
             </tr>
           </thead>
           <tbody></tbody>
         </table>
       </div>
-      <p class="hint">
-        O % concluída pode ser calculado pelas ações:
-        <button type="button" id="btnCalcPct" class="btn link inline">recalcular a partir do plano</button>
-      </p>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;flex-wrap:wrap;gap:8px">
+        <span class="hint">O % de conclusão pode ser calculado pelo plano:</span>
+        <button type="button" id="btnCalcPct" class="btn small ghost">Recalcular % pelas ações</button>
+      </div>
     </section>
 
     <!-- Blocos 6 e 7 -->
     <div class="cols2">
       <section class="card">
         <h4>6. Padronização</h4>
-        <p class="hint">Documentos/check-lists, auditoria, treinamento, fluxo, indicador, SIPOC/RACI.</p>
+        <p class="hint">Procedimentos, POP, check-lists, treinamentos, auditoria, SIPOC/RACI.</p>
         <label class="sr-only" for="fPadron">Padronização</label>
-        <textarea id="fPadron" data-f="padronizacao" rows="6"></textarea>
+        <textarea id="fPadron" data-f="padronizacao" rows="6" placeholder="Documentos e normas atualizados..."></textarea>
       </section>
+
       <section class="card">
-        <h4>7. Aprovação / Expansão horizontal</h4>
-        <label>Aprovação
-          <input type="text" data-f="aprovacao" placeholder="Nome do(s) aprovador(es)">
+        <h4>7. Aprovação e Expansão horizontal</h4>
+        <label>Aprovação (nome dos aprovadores)
+          <input type="text" data-f="aprovacao" placeholder="Ex.: Marina Alves (Gerente)">
         </label>
-        <label class="inline-check">
+        <label>Status da aprovação
+          <select data-f="aprovacaoStatus">
+            <option value="pendente">Pendente</option>
+            <option value="aprovado">Aprovado</option>
+            <option value="rejeitado">Rejeitado</option>
+          </select>
+        </label>
+        <label class="inline-check" style="margin-top:12px">
           <input type="checkbox" data-f="expansao"> Expansão horizontal aplicável
         </label>
-        <label>Área / UO
-          <input type="text" data-f="expansaoArea" placeholder="UO que pode replicar a solução">
+        <label>Área / UO de replicação
+          <input type="text" data-f="expansaoArea" placeholder="Linha ou UO que pode replicar a melhoria">
         </label>
       </section>
     </div>
 
-    <!-- Bloco 8: resultados / BC -->
+    <!-- Bloco 8: Resultados e Business Case -->
     <section class="card">
       <h4>8. Resultados (Business Case)</h4>
       <div class="grid-4">
@@ -259,26 +390,31 @@
           <input type="number" step="0.01" min="0" data-f="custo" placeholder="0,00">
         </label>
         <label>B/C Ratio
-          <input type="text" id="bcRatio" readonly tabindex="-1">
+          <input type="text" id="bcRatio" readonly tabindex="-1" placeholder="—">
         </label>
-        <label>Tipo
-          <select data-f="tipo">
-            <option>Kaizen</option>
-            <option>Performance</option>
+        <label>Tipo de Benefício *
+          <select data-f="tipoBeneficio">
+            <option value="">— Selecione —</option>
+            <option value="hard_saving">Hard Saving (ganho real)</option>
+            <option value="cost_avoidance">Cost Avoidance (perda evitada)</option>
           </select>
         </label>
       </div>
-      <label>Observações do BC
-        <textarea data-f="bcObs" rows="3"></textarea>
+      <label style="margin-top:8px">Observações do Business Case
+        <textarea data-f="bcObs" rows="3" placeholder="Premissas financeiras, payback, memórias de cálculo..."></textarea>
       </label>
     </section>
 
-    <!-- Análise de risco -->
+    <!-- Análise de Riscos (Ilimitada) -->
     <section class="card">
       <div class="card-head">
-        <h4>Análise de riscos e oportunidades</h4>
-        <button type="button" id="btnAddRisk" class="btn small">+ Adicionar risco</button>
+        <div>
+          <h4>Análise de riscos e oportunidades</h4>
+          <p class="hint">Severidade (1-4) × Probabilidade (1-4) = Score (1-16)</p>
+        </div>
+        <button type="button" id="btnAddRisk" class="btn small primary">+ Adicionar risco</button>
       </div>
+
       <div class="table-wrap">
         <table id="riskTable">
           <caption class="sr-only">Riscos e oportunidades</caption>
@@ -286,24 +422,94 @@
             <tr>
               <th scope="col">Descrição do risco</th>
               <th scope="col" style="width:110px">Severidade</th>
-              <th scope="col" style="width:110px">Probabilid.</th>
+              <th scope="col" style="width:110px">Probabilidade</th>
               <th scope="col" style="width:80px">Score</th>
               <th scope="col">Ação de mitigação</th>
-              <th scope="col" style="width:140px">Responsável</th>
-              <th scope="col" style="width:48px"><span class="sr-only">Remover</span></th>
+              <th scope="col" style="width:150px">Responsável</th>
+              <th scope="col" style="width:40px"><span class="sr-only">Remover</span></th>
             </tr>
           </thead>
           <tbody></tbody>
         </table>
       </div>
     </section>
+
+    <!-- Links e Referências com Indexação -->
+    <section class="card">
+      <div class="card-head">
+        <div>
+          <h4>Links e referências indexadas</h4>
+          <p class="hint">Links para SharePoint, OneDrive, dashboards ou documentação técnica (incluídos na busca).</p>
+        </div>
+        <button type="button" id="btnAddLink" class="btn small primary">+ Adicionar link</button>
+      </div>
+
+      <div class="table-wrap">
+        <table id="linksTable">
+          <caption class="sr-only">Links e referências do projeto</caption>
+          <thead>
+            <tr>
+              <th scope="col" style="width:180px">Título</th>
+              <th scope="col">URL</th>
+              <th scope="col" style="width:120px">Categoria</th>
+              <th scope="col" style="width:160px">Tags</th>
+              <th scope="col" style="width:80px">Busca</th>
+              <th scope="col" style="width:100px">Ações</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
   </form>
 </main>
 
+<!-- MODAL PARA ADICIONAR LINK -->
+<div id="modalAddLink" class="modal hidden">
+  <div class="modal-box" role="dialog" aria-labelledby="modalLinkTitle">
+    <div class="card-head">
+      <h4 id="modalLinkTitle">Adicionar link de referência</h4>
+      <button type="button" id="btnCloseLinkModal" class="rm" aria-label="Fechar">✕</button>
+    </div>
+    <form id="formAddLink">
+      <label for="linkTitulo">Título do link *
+        <input type="text" id="linkTitulo" required placeholder="Ex.: Planilha de refugo horário">
+      </label>
+      <label for="linkUrl">URL (apenas https://) *
+        <input type="url" id="linkUrl" required pattern="https://.*" placeholder="https://empresa.sharepoint.com/...">
+      </label>
+      <label for="linkCategoria">Categoria
+        <select id="linkCategoria">
+          <option value="documento">Documento</option>
+          <option value="planilha">Planilha</option>
+          <option value="foto">Foto / Imagem</option>
+          <option value="video">Vídeo</option>
+          <option value="sistema">Sistema / BI</option>
+          <option value="outro">Outro</option>
+        </select>
+      </label>
+      <label for="linkTags">Tags (separadas por vírgula)
+        <input type="text" id="linkTags" placeholder="Ex.: refugo, linha-3, qualidade">
+      </label>
+      <label for="linkDescricao">Descrição
+        <textarea id="linkDescricao" rows="2" placeholder="O que este link contém..."></textarea>
+      </label>
+      <label class="inline-check">
+        <input type="checkbox" id="linkIndexado" checked> Indexar para busca no hub
+      </label>
+      <div class="modal-actions" style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px">
+        <button type="button" id="btnCancelLink" class="btn ghost">Cancelar</button>
+        <button type="submit" class="btn primary">Adicionar link</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
-<!-- ========== SCRIPTS ========== -->
-<script type="module" src="app.js"></script>
+<!-- SCRIPTS EM MÓDULOS ES NATIVOS -->
+<script type="module" src="app.js?v=20261117-01"></script>
 
 </body>
 </html>

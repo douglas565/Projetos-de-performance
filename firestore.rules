@@ -2,34 +2,130 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ---- helper: e-mail está na lista de administradores? ----
-    function isAdmin() {
-      return request.auth != null
-        && get(/databases/$(database)/documents/config/admins).data.emails
-             .hasAny([request.auth.token.email.lower()]);
+    // ---------- funções de autenticação e papel ----------
+    function signedIn()  { return request.auth != null; }
+    function uid()       { return request.auth.uid; }
+    function userDoc()   { return /databases/$(database)/documents/users/$(uid()); }
+    function me()        { return get(userDoc()).data; }
+    function isActive()  { return signedIn() && exists(userDoc()) && me().status == 'active'; }
+    function isAdmin()   { return isActive() && me().role == 'admin'; }
+    function configDoc() { return /databases/$(database)/documents/config/app; }
+    function verified()  {
+      return request.auth.token.email_verified == true
+          || !exists(configDoc())
+          || get(configDoc()).data.requireEmailVerification == false;
     }
 
-    // ---- lista de administradores ----
+    // ---------- configuração do sistema ----------
+    match /config/app {
+      allow read:  if signedIn();
+      allow write: if isAdmin();
+    }
+    match /config/lookups {
+      allow read:  if signedIn();
+      allow write: if isAdmin();
+    }
+    // legado: somente leitura enquanto durar a migração
     match /config/admins {
-      // qualquer autenticado LÊ (o app precisa checar se é admin)
-      allow read: if request.auth != null;
-      // só admin ALTERA; exceção: bootstrap quando a lista ainda não existe
-      allow create: if request.auth != null;
-      allow update: if isAdmin();
+      allow read:  if signedIn();
+      allow write: if false;
+    }
+
+    // ---------- diretório de usuários para compartilhamento ----------
+    // Permite que usuários ativos busquem colegas por e-mail/nome sem expor a coleção users/
+    match /directory/{userId} {
+      allow read:  if isActive();
+      allow create, update: if signedIn() && uid() == userId && request.resource.data.uid == userId;
+      allow delete: if isAdmin();
+    }
+
+    // ---------- usuários ----------
+    match /users/{userId} {
+      allow get:  if signedIn() && (uid() == userId || isAdmin());
+      allow list: if isAdmin();
+
+      // cadastro: nasce pending e role=user
+      allow create: if signedIn()
+        && uid() == userId
+        && request.resource.data.uid == userId
+        && request.resource.data.role == 'user'
+        && request.resource.data.status == 'pending';
+
+      // atualização de perfil próprio (sem poder mudar role nem status)
+      // admin pode alterar qualquer campo (incluindo aprovar/bloquear e promover a admin)
+      allow update: if isAdmin()
+        || (signedIn() && uid() == userId
+            && request.resource.data.role == resource.data.role
+            && request.resource.data.status == resource.data.status
+            && request.resource.data.uid == resource.data.uid
+            && request.resource.data.email == resource.data.email
+            && request.resource.data.keys().hasOnly([
+                 'uid','email','nome','areaNegocio','role','status',
+                 'criadoEm','atualizadoEm','ultimoLogin','preferencias'
+               ]));
+
       allow delete: if false;
     }
 
-    // ---- projetos de cada usuário ----
+    // ---------- kaizens v2 ----------
+    match /kaizens/{kaizenId} {
+      function k()  { return resource.data; }
+      function nk() { return request.resource.data; }
+
+      function canRead() {
+        return isActive() && (
+          k().ownerUid == uid()
+          || (('sharedWithUids' in k()) && uid() in k().sharedWithUids)
+          || (('viewersUids' in k()) && uid() in k().viewersUids)
+          || (('editorsUids' in k()) && uid() in k().editorsUids)
+          || (('visibilidade' in k()) && k().visibilidade == 'compartilhado')
+          || isAdmin()
+        );
+      }
+
+      function canWrite() {
+        return isActive() && (
+          k().ownerUid == uid()
+          || (('editorsUids' in k()) && uid() in k().editorsUids)
+          || isAdmin()
+        );
+      }
+
+      allow get:  if canRead();
+      allow list: if isAdmin() || canRead();
+
+      allow create: if isActive() && verified()
+        && nk().ownerUid == uid()
+        && nk().schemaVersion == 2
+        && nk().rev == 1
+        && nk().arquivado == false;
+
+      allow update: if canWrite() && verified()
+        && nk().ownerUid == k().ownerUid
+        && nk().schemaVersion == k().schemaVersion
+        && nk().rev == k().rev + 1
+        && nk().atualizadoEm != null;
+
+      allow delete: if isAdmin();
+    }
+
+    // ---------- histórico de auditoria (opcional append-only) ----------
+    match /kaizens/{kaizenId}/historico/{eventoId} {
+      allow read: if isActive() && (
+        get(/databases/$(database)/documents/kaizens/$(kaizenId)).data.ownerUid == uid()
+        || isAdmin()
+      );
+      allow create: if isActive() && request.resource.data.uid == uid();
+      allow update, delete: if false;
+    }
+
+    // ---------- legado v1: somente leitura para migração ----------
     match /users/{userId}/projetos/{projetoId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if signedIn() && (uid() == userId || isAdmin());
+      allow write: if false;
     }
 
-    // ---- leitura global para o painel executivo (collectionGroup) ----
-    match /{path=**}/projetos/{projetoId} {
-      allow read: if isAdmin();
-    }
-
-    // ---- bloqueia o resto ----
+    // ---------- resto bloqueado ----------
     match /{document=**} {
       allow read, write: if false;
     }
