@@ -39,10 +39,54 @@ document.addEventListener("DOMContentLoaded", () => {
   $("#btnLogout").onclick = () => signOut(auth);
 
   onAuthStateChanged(auth, async (user) => {
-    if (!user) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const isMock = urlParams.get("mock") === "1" || urlParams.get("demo") === "1" || Boolean(window.__MOCK_ADMIN__);
+
+    if (!user && !isMock) {
       window.location.href = "index.html";
       return;
     }
+
+    if (isMock && !user) {
+      currentUser = { uid: "mock-admin", email: "admin@empresa.com", displayName: "Admin Teste" };
+      currentProfile = { role: "admin", status: "active", nome: "Admin Teste" };
+      $("#userChip").textContent = "Admin Teste";
+      $("#viewLoading")?.classList.add("hidden");
+      $("#viewAdmin")?.classList.remove("hidden");
+
+      // Popula dados de demonstração para renderizar os 6 gráficos no teste sem Firebase
+      allKaizens = [
+        { id: "k1", data: "2026-10-05", criadoEm: "2026-10-05", areaNegocio: "Operação", status: "concluido", tipo: "kaizen", percentual: 100, beneficio: 65000, custo: 12000, tipoBeneficio: "hard_saving", pilares: { seguranca: true, qualidade: true } },
+        { id: "k2", data: "2026-10-20", criadoEm: "2026-10-20", areaNegocio: "DAF", status: "em_andamento", tipo: "performance", percentual: 50, beneficio: 30000, custo: 6000, tipoBeneficio: "cost_avoidance", pilares: { lucratividade: true } },
+        { id: "k3", data: "2026-11-02", criadoEm: "2026-11-02", areaNegocio: "Engenharia", status: "concluido", tipo: "kaizen", percentual: 100, beneficio: 45000, custo: 8000, tipoBeneficio: "hard_saving", pilares: { entrega: true, pessoas: true } },
+        { id: "k4", data: "2026-11-12", criadoEm: "2026-11-12", areaNegocio: "TI / Digital", status: "rascunho", tipo: "performance", percentual: 25, beneficio: 15000, custo: 3000, tipoBeneficio: "cost_avoidance", pilares: { qualidade: true } }
+      ];
+      allUsers = [
+        { uid: "u1", nome: "Carlos Silva", email: "carlos@empresa.com", status: "active", role: "user" },
+        { uid: "u2", nome: "Ana Santos", email: "ana@empresa.com", status: "pending", role: "user" }
+      ];
+
+      // Atualiza filtro de áreas
+      const areas = [...new Set(allKaizens.map((k) => k.areaNegocio).filter(Boolean))].sort();
+      const sel = $("#fArea");
+      if (sel) {
+        sel.replaceChildren();
+        const optTodos = document.createElement("option");
+        optTodos.value = "";
+        optTodos.textContent = "Todas as áreas";
+        sel.appendChild(optTodos);
+        areas.forEach((a) => {
+          const opt = document.createElement("option");
+          opt.value = a;
+          opt.textContent = a;
+          sel.appendChild(opt);
+        });
+      }
+
+      renderDashboard();
+      return;
+    }
+
     currentUser = user;
     $("#userChip").textContent = user.displayName || user.email;
 
@@ -125,6 +169,14 @@ function setupFilters() {
     $(s)?.addEventListener("change", renderDashboard);
   });
   $("#btnExport")?.addEventListener("click", exportCSV);
+
+  // Re-renderizar gráficos quando o tema alternar
+  const themeObserver = new MutationObserver(() => {
+    if (!$("#tabDashboard")?.classList.contains("hidden") && allKaizens.length > 0) {
+      renderDashboard();
+    }
+  });
+  themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 
   $("#searchUsers")?.addEventListener("input", renderUsersTable);
   $("#filterUserStatus")?.addEventListener("change", renderUsersTable);
@@ -246,7 +298,7 @@ function renderDashboard() {
   })).sort((a, b) => b.ben - a.ben);
 
   renderTabelaArea(resumoAreas);
-  renderGraficoNativo(resumoAreas);
+  renderDashboardCharts(lista, resumoAreas);
 }
 
 function renderTabelaArea(resumo) {
@@ -330,45 +382,543 @@ function renderTabelaArea(resumo) {
   tfoot.appendChild(trFoot);
 }
 
-function renderGraficoNativo(resumo) {
-  const container = $("#chartBarras");
-  if (!container) return;
-  container.innerHTML = "";
+// ============================================================
+// 3.1. GRÁFICOS EXECUTIVOS (CHART.JS 4.4.1)
+// ============================================================
+const chartMap = new Map();
 
-  if (resumo.length === 0) {
-    container.textContent = "Nenhum dado disponível para os filtros selecionados.";
+function destroyChart(id) {
+  const canvas = document.getElementById(id);
+  if (canvas && typeof window.Chart !== "undefined") {
+    const existing = window.Chart.getChart(canvas);
+    if (existing) {
+      existing.destroy();
+    }
+  }
+  chartMap.delete(id);
+}
+
+function destroyAllCharts() {
+  ["chartG1", "chartG2", "chartG3", "chartG4", "chartG5", "chartG6"].forEach(destroyChart);
+}
+
+function getChartTheme() {
+  const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+  const styles = getComputedStyle(document.documentElement);
+  return {
+    isDark,
+    textColor: (styles.getPropertyValue("--ink") || (isDark ? "#E6EDF7" : "#15243B")).trim(),
+    mutedColor: (styles.getPropertyValue("--muted") || (isDark ? "#93A4BC" : "#5F6E84")).trim(),
+    gridColor: (styles.getPropertyValue("--line") || (isDark ? "#24344A" : "#E3E8F0")).trim(),
+    cardBg: (styles.getPropertyValue("--card") || (isDark ? "#16212F" : "#FFFFFF")).trim(),
+    brand: (styles.getPropertyValue("--brand") || (isDark ? "#4C8DFF" : "#0A66FF")).trim(),
+    brandSoft: (styles.getPropertyValue("--brand-soft") || (isDark ? "#1A2A3F" : "#EEF3FB")).trim(),
+    ok: (styles.getPropertyValue("--ok") || (isDark ? "#20C997" : "#17A673")).trim(),
+    warn: (styles.getPropertyValue("--warn") || (isDark ? "#FAB005" : "#E8A300")).trim(),
+    danger: (styles.getPropertyValue("--danger") || (isDark ? "#FF6B6B" : "#E04141")).trim(),
+    info: (styles.getPropertyValue("--info") || (isDark ? "#339AF0" : "#2E6BE6")).trim()
+  };
+}
+
+function renderDashboardCharts(lista, resumoAreas) {
+  const emptyCard = $("#chartsEmptyState");
+  const chartsContainer = $("#chartsContainer");
+
+  // Estado vazio: nenhum kaizen para os filtros
+  if (!lista || lista.length === 0) {
+    if (emptyCard) emptyCard.classList.remove("hidden");
+    if (chartsContainer) chartsContainer.classList.add("hidden");
+    destroyAllCharts();
     return;
   }
 
-  const maxVal = Math.max(...resumo.map((g) => g.ben), 1);
+  if (emptyCard) emptyCard.classList.add("hidden");
+  if (chartsContainer) chartsContainer.classList.remove("hidden");
 
-  resumo.forEach((g) => {
-    const row = document.createElement("div");
-    row.className = "chart-row";
+  if (typeof window.Chart === "undefined") {
+    console.warn("Chart.js não carregado. Verifique a conexão com o CDN.");
+    return;
+  }
 
-    const label = document.createElement("div");
-    label.className = "chart-label";
-    label.title = g.area;
-    label.textContent = g.area;
+  const theme = getChartTheme();
+  const fontFamily = '"Segoe UI Variable", "Segoe UI", Inter, system-ui, sans-serif';
 
-    const wrap = document.createElement("div");
-    wrap.className = "chart-bar-wrap";
+  const defaultPlugins = {
+    legend: {
+      labels: {
+        color: theme.textColor,
+        font: { family: fontFamily, size: 12, weight: 600 }
+      }
+    },
+    tooltip: {
+      backgroundColor: theme.cardBg,
+      titleColor: theme.textColor,
+      bodyColor: theme.textColor,
+      borderColor: theme.gridColor,
+      borderWidth: 1,
+      padding: 10,
+      cornerRadius: 8
+    }
+  };
 
-    const fill = document.createElement("div");
-    fill.className = "chart-bar-fill";
-    const widthPct = Math.max(2, Math.round((g.ben / maxVal) * 100));
-    fill.style.width = `${widthPct}%`;
-    wrap.appendChild(fill);
+  // ----- G1: Conclusão média por área (%) -----
+  (() => {
+    destroyChart("chartG1");
+    const canvas = document.getElementById("chartG1");
+    if (!canvas) return;
 
-    const val = document.createElement("div");
-    val.className = "chart-val";
-    val.textContent = BRL(g.ben);
+    const sortedAreas = [...resumoAreas].sort((a, b) => b.conc - a.conc);
+    const labels = sortedAreas.map((g) => g.area);
+    const data = sortedAreas.map((g) => Number(g.conc.toFixed(1)));
 
-    row.appendChild(label);
-    row.appendChild(wrap);
-    row.appendChild(val);
-    container.appendChild(row);
-  });
+    const chart = new window.Chart(canvas, {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [{
+          label: "Conclusão média (%)",
+          data,
+          backgroundColor: theme.brand,
+          borderRadius: 6,
+          maxBarThickness: 24
+        }]
+      },
+      options: {
+        indexAxis: "y",
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          ...defaultPlugins,
+          legend: { display: false },
+          tooltip: {
+            ...defaultPlugins.tooltip,
+            callbacks: {
+              label: (ctx) => ` Conclusão média: ${ctx.raw}%`
+            }
+          }
+        },
+        scales: {
+          x: {
+            min: 0,
+            max: 100,
+            ticks: {
+              color: theme.mutedColor,
+              callback: (v) => `${v}%`,
+              font: { family: fontFamily, size: 11 }
+            },
+            grid: { color: theme.gridColor }
+          },
+          y: {
+            ticks: {
+              color: theme.textColor,
+              font: { family: fontFamily, size: 12, weight: 600 }
+            },
+            grid: { display: false }
+          }
+        }
+      }
+    });
+    chartMap.set("chartG1", chart);
+  })();
+
+  // ----- G2: Investimento × Benefício por área (R$) -----
+  (() => {
+    destroyChart("chartG2");
+    const canvas = document.getElementById("chartG2");
+    if (!canvas) return;
+
+    const labels = resumoAreas.map((g) => g.area);
+    const dataInv = resumoAreas.map((g) => g.inv);
+    const dataBen = resumoAreas.map((g) => g.ben);
+
+    const chart = new window.Chart(canvas, {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "Investimento",
+            data: dataInv,
+            backgroundColor: theme.warn,
+            borderRadius: 4,
+            maxBarThickness: 20
+          },
+          {
+            label: "Benefício total",
+            data: dataBen,
+            backgroundColor: theme.ok,
+            borderRadius: 4,
+            maxBarThickness: 20
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          ...defaultPlugins,
+          tooltip: {
+            ...defaultPlugins.tooltip,
+            callbacks: {
+              label: (ctx) => ` ${ctx.dataset.label}: ${BRL(ctx.raw)}`
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: {
+              color: theme.textColor,
+              font: { family: fontFamily, size: 11 },
+              maxRotation: 45,
+              minRotation: 0
+            },
+            grid: { display: false }
+          },
+          y: {
+            ticks: {
+              color: theme.mutedColor,
+              font: { family: fontFamily, size: 11 },
+              callback: (v) => BRL(v)
+            },
+            grid: { color: theme.gridColor }
+          }
+        }
+      }
+    });
+    chartMap.set("chartG2", chart);
+  })();
+
+  // ----- G3: Benefício por área e tipo (R$) (Empilhado) -----
+  (() => {
+    destroyChart("chartG3");
+    const canvas = document.getElementById("chartG3");
+    if (!canvas) return;
+
+    const labels = resumoAreas.map((g) => g.area);
+    const dataHs = resumoAreas.map((g) => g.hs);
+    const dataCa = resumoAreas.map((g) => g.ca);
+
+    const chart = new window.Chart(canvas, {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "Hard Saving",
+            data: dataHs,
+            backgroundColor: theme.ok,
+            borderRadius: 4,
+            maxBarThickness: 24,
+            stack: "beneficio"
+          },
+          {
+            label: "Cost Avoidance",
+            data: dataCa,
+            backgroundColor: theme.brand,
+            borderRadius: 4,
+            maxBarThickness: 24,
+            stack: "beneficio"
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          ...defaultPlugins,
+          tooltip: {
+            ...defaultPlugins.tooltip,
+            callbacks: {
+              label: (ctx) => ` ${ctx.dataset.label}: ${BRL(ctx.raw)}`
+            }
+          }
+        },
+        scales: {
+          x: {
+            stacked: true,
+            ticks: {
+              color: theme.textColor,
+              font: { family: fontFamily, size: 11 },
+              maxRotation: 45,
+              minRotation: 0
+            },
+            grid: { display: false }
+          },
+          y: {
+            stacked: true,
+            ticks: {
+              color: theme.mutedColor,
+              font: { family: fontFamily, size: 11 },
+              callback: (v) => BRL(v)
+            },
+            grid: { color: theme.gridColor }
+          }
+        }
+      }
+    });
+    chartMap.set("chartG3", chart);
+  })();
+
+  // ----- G4: Evolução mensal (Criados × Concluídos) -----
+  (() => {
+    destroyChart("chartG4");
+    const canvas = document.getElementById("chartG4");
+    if (!canvas) return;
+
+    const monthsMap = {};
+
+    function parseMonth(val) {
+      if (!val) return null;
+      if (typeof val === "string" && /^\d{4}-\d{2}/.test(val)) {
+        return val.substring(0, 7);
+      }
+      if (typeof val === "object" && val.seconds) {
+        const d = new Date(val.seconds * 1000);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      }
+      try {
+        const d = new Date(val);
+        if (!isNaN(d.getTime())) {
+          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+        }
+      } catch (_) {}
+      return null;
+    }
+
+    const now = new Date();
+    const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+    lista.forEach((k) => {
+      const mCreated = parseMonth(k.data) || parseMonth(k.criadoEm) || currentMonthKey;
+      if (!monthsMap[mCreated]) monthsMap[mCreated] = { criados: 0, concluidos: 0 };
+      monthsMap[mCreated].criados++;
+
+      if (k.status === "concluido") {
+        const mDone = parseMonth(k.atualizadoEm) || parseMonth(k.data) || mCreated;
+        if (!monthsMap[mDone]) monthsMap[mDone] = { criados: 0, concluidos: 0 };
+        monthsMap[mDone].concluidos++;
+      }
+    });
+
+    const sortedMonthKeys = Object.keys(monthsMap).sort();
+    if (sortedMonthKeys.length === 0) {
+      sortedMonthKeys.push(currentMonthKey);
+      monthsMap[currentMonthKey] = { criados: 0, concluidos: 0 };
+    }
+
+    const monthLabels = sortedMonthKeys.map((k) => {
+      const [y, m] = k.split("-");
+      const d = new Date(Number(y), Number(m) - 1, 1);
+      return d.toLocaleDateString("pt-BR", { month: "short", year: "2-digit" });
+    });
+
+    const dataCriados = sortedMonthKeys.map((k) => monthsMap[k].criados);
+    const dataConcluidos = sortedMonthKeys.map((k) => monthsMap[k].concluidos);
+
+    const chart = new window.Chart(canvas, {
+      type: "line",
+      data: {
+        labels: monthLabels,
+        datasets: [
+          {
+            label: "Projetos criados",
+            data: dataCriados,
+            borderColor: theme.brand,
+            backgroundColor: theme.brandSoft,
+            tension: 0.3,
+            fill: false,
+            pointRadius: 4,
+            pointHoverRadius: 6
+          },
+          {
+            label: "Projetos concluídos",
+            data: dataConcluidos,
+            borderColor: theme.ok,
+            backgroundColor: "rgba(23, 166, 115, 0.1)",
+            tension: 0.3,
+            fill: false,
+            pointRadius: 4,
+            pointHoverRadius: 6
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          ...defaultPlugins,
+          tooltip: {
+            ...defaultPlugins.tooltip,
+            callbacks: {
+              label: (ctx) => ` ${ctx.dataset.label}: ${ctx.raw} projeto(s)`
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: {
+              color: theme.textColor,
+              font: { family: fontFamily, size: 11 }
+            },
+            grid: { color: theme.gridColor }
+          },
+          y: {
+            min: 0,
+            ticks: {
+              precision: 0,
+              color: theme.mutedColor,
+              font: { family: fontFamily, size: 11 }
+            },
+            grid: { color: theme.gridColor }
+          }
+        }
+      }
+    });
+    chartMap.set("chartG4", chart);
+  })();
+
+  // ----- G5: Distribuição por status e modalidade (Donut) -----
+  (() => {
+    destroyChart("chartG5");
+    const canvas = document.getElementById("chartG5");
+    if (!canvas) return;
+
+    const countRascunho = lista.filter((k) => k.status === "rascunho").length;
+    const countAndamento = lista.filter((k) => k.status === "em_andamento" || (!k.status && !k.arquivado)).length;
+    const countConcluido = lista.filter((k) => k.status === "concluido").length;
+    const countCancelado = lista.filter((k) => k.status === "cancelado").length;
+
+    const countKaizen = lista.filter((k) => (k.tipo || "kaizen") === "kaizen").length;
+    const countPerformance = lista.filter((k) => k.tipo === "performance").length;
+
+    const chart = new window.Chart(canvas, {
+      type: "doughnut",
+      data: {
+        labels: ["Rascunho", "Em andamento", "Concluído", "Cancelado", "Kaizen", "Performance"],
+        datasets: [
+          {
+            label: "Status",
+            data: [countRascunho, countAndamento, countConcluido, countCancelado],
+            backgroundColor: [theme.mutedColor, theme.brand, theme.ok, theme.danger],
+            borderWidth: 2,
+            borderColor: theme.cardBg
+          },
+          {
+            label: "Modalidade",
+            data: [countKaizen, countPerformance],
+            backgroundColor: ["#8B5CF6", "#00C2FF"],
+            borderWidth: 2,
+            borderColor: theme.cardBg
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          ...defaultPlugins,
+          tooltip: {
+            ...defaultPlugins.tooltip,
+            callbacks: {
+              label: (ctx) => {
+                const dsIndex = ctx.datasetIndex;
+                const statusLabels = ["Rascunho", "Em andamento", "Concluído", "Cancelado"];
+                const modLabels = ["Kaizen", "Performance"];
+                const label = dsIndex === 0 ? statusLabels[ctx.dataIndex] : modLabels[ctx.dataIndex];
+                const group = dsIndex === 0 ? "Status" : "Modalidade";
+                return ` ${group} · ${label}: ${ctx.raw} projeto(s)`;
+              }
+            }
+          }
+        }
+      }
+    });
+    chartMap.set("chartG5", chart);
+  })();
+
+  // ----- G6: Cobertura por pilares (Barra horizontal S/Q/E/L/P) -----
+  (() => {
+    destroyChart("chartG6");
+    const canvas = document.getElementById("chartG6");
+    if (!canvas) return;
+
+    const pilaresCont = {
+      seguranca: lista.filter((k) => k.pilares?.seguranca).length,
+      qualidade: lista.filter((k) => k.pilares?.qualidade).length,
+      entrega: lista.filter((k) => k.pilares?.entrega).length,
+      lucratividade: lista.filter((k) => k.pilares?.lucratividade).length,
+      pessoas: lista.filter((k) => k.pilares?.pessoas).length
+    };
+
+    const labels = [
+      "Segurança (S)",
+      "Qualidade (Q)",
+      "Entrega (E)",
+      "Lucratividade (L)",
+      "Pessoas (P)"
+    ];
+    const data = [
+      pilaresCont.seguranca,
+      pilaresCont.qualidade,
+      pilaresCont.entrega,
+      pilaresCont.lucratividade,
+      pilaresCont.pessoas
+    ];
+
+    const chart = new window.Chart(canvas, {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [{
+          label: "Projetos com impacto no pilar",
+          data,
+          backgroundColor: [
+            theme.danger,
+            theme.brand,
+            theme.warn,
+            theme.ok,
+            "#8B5CF6"
+          ],
+          borderRadius: 6,
+          maxBarThickness: 22
+        }]
+      },
+      options: {
+        indexAxis: "y",
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          ...defaultPlugins,
+          legend: { display: false },
+          tooltip: {
+            ...defaultPlugins.tooltip,
+            callbacks: {
+              label: (ctx) => ` Projetos: ${ctx.raw}`
+            }
+          }
+        },
+        scales: {
+          x: {
+            min: 0,
+            ticks: {
+              precision: 0,
+              color: theme.mutedColor,
+              font: { family: fontFamily, size: 11 }
+            },
+            grid: { color: theme.gridColor }
+          },
+          y: {
+            ticks: {
+              color: theme.textColor,
+              font: { family: fontFamily, size: 12, weight: 600 }
+            },
+            grid: { display: false }
+          }
+        }
+      }
+    });
+    chartMap.set("chartG6", chart);
+  })();
 }
 
 function exportCSV() {
