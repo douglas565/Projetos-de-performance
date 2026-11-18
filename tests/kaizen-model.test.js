@@ -16,6 +16,7 @@ import {
   syncSharingLists,
   createDefaultKaizen,
   validateKaizen,
+  validateWizardStep,
   canUserRead,
   canUserEdit,
   migrateLegacyActions,
@@ -99,6 +100,7 @@ test("createDefaultKaizen() inicializa schema v2 com rev=1 e valores padrão", (
 
   assert.equal(k.schemaVersion, 2);
   assert.equal(k.rev, 1);
+  assert.equal(k.etapaAtual, 0);
   assert.equal(k.ownerUid, "user-123");
   assert.equal(k.ownerEmail, "groot@empresa.com");
   assert.equal(k.ownerNome, "Groot");
@@ -289,4 +291,44 @@ test("migrateLegacyProject() transforma dados legados do V6/v1 para v2", () => {
   assert.equal(v2.ownerUid, "user-carlos");
   assert.ok(v2.searchKeywords.includes("caldeira"));
   assert.ok(v2.searchKeywords.includes("biomassa"));
+});
+
+test("validateWizardStep() valida requisitos específicos de cada etapa do wizard", () => {
+  const kIncompleto = { projeto: "" };
+  const v0 = validateWizardStep(kIncompleto, 0);
+  assert.equal(v0.valid, false);
+  assert.ok(v0.errors.some((e) => e.includes("nome do projeto")));
+
+  const kIdentificado = {
+    projeto: "Redução de Perdas",
+    area: "Linha 1",
+    data: "2026-11-17",
+    lider: "Groot",
+    areaNegocio: "Operação"
+  };
+  assert.equal(validateWizardStep(kIdentificado, 0).valid, true);
+
+  // Etapa 1: incômodo
+  assert.equal(validateWizardStep(kIdentificado, 1).valid, false);
+  kIdentificado.incomodo = "Perda de matéria-prima acima de 5%";
+  assert.equal(validateWizardStep(kIdentificado, 1).valid, true);
+
+  // Etapa 3: 5W2H
+  assert.equal(validateWizardStep(kIdentificado, 3).valid, false);
+  kIdentificado.w2h = { what: "Instalar sensor", how: "Comprar equipamento e instalar na esteira" };
+  assert.equal(validateWizardStep(kIdentificado, 3).valid, true);
+
+  // Etapa 7: Expansão horizontal sem área
+  kIdentificado.expansao = true;
+  kIdentificado.expansaoArea = "";
+  assert.equal(validateWizardStep(kIdentificado, 7).valid, false);
+  kIdentificado.expansaoArea = "Linha 2";
+  assert.equal(validateWizardStep(kIdentificado, 7).valid, true);
+
+  // Etapa 8: Benefício sem tipo
+  kIdentificado.beneficio = 10000;
+  kIdentificado.tipoBeneficio = "";
+  assert.equal(validateWizardStep(kIdentificado, 8).valid, false);
+  kIdentificado.tipoBeneficio = "hard_saving";
+  assert.equal(validateWizardStep(kIdentificado, 8).valid, true);
 });

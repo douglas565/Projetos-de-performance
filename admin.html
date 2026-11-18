@@ -4,8 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Painel Executivo · Kaizen Hub v2</title>
-  <link rel="stylesheet" href="style.css?v=20261117-01">
-  <link rel="stylesheet" href="admin.css?v=20261117-01">
+  <link rel="stylesheet" href="style.css?v=20261118-01">
+  <link rel="stylesheet" href="admin.css?v=20261118-01">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -19,7 +20,7 @@
   </div>
   <div class="topbar-right">
     <button type="button" id="btnToggleTheme" class="btn ghost small" aria-label="Alternar tema">🌙 Tema escuro</button>
-    <a href="index.html?v=20261117-01" class="btn ghost small">← Meus projetos</a>
+    <a href="index.html?v=20261118-01" class="btn ghost small">← Meus projetos</a>
     <span id="userChip" class="chip"></span>
     <button type="button" id="btnLogout" class="btn ghost small">Sair</button>
   </div>
@@ -32,7 +33,7 @@
     <p class="muted" id="deniedMsg" style="margin:12px 0 20px">
       Este painel é exclusivo para administradores.
     </p>
-    <a href="index.html?v=20261117-01" class="btn primary block">Voltar ao hub</a>
+    <a href="index.html?v=20261118-01" class="btn primary block">Voltar ao hub</a>
   </div>
 </main>
 
@@ -110,11 +111,55 @@
       </div>
     </section>
 
-    <!-- GRÁFICO DE BARRAS NATIVO -->
-    <section class="card">
-      <h4>Benefício financeiro por área (R$)</h4>
-      <div id="chartBarras" class="native-chart"></div>
-    </section>
+    <!-- ESTADO VAZIO DOS GRÁFICOS -->
+    <div id="chartsEmptyState" class="card chart-empty hidden">
+      <p class="muted" style="margin:0;font-size:14px">Nenhum dado disponível para os filtros selecionados.</p>
+    </div>
+
+    <!-- SEÇÃO DE GRÁFICOS EXECUTIVOS (6 GRÁFICOS CHART.JS) -->
+    <div id="chartsContainer" class="charts-grid">
+      <section class="card chart-card">
+        <h4>G1 · Conclusão média por área (%)</h4>
+        <div class="chart-wrapper">
+          <canvas id="chartG1" aria-label="Conclusão média por área" role="img"></canvas>
+        </div>
+      </section>
+
+      <section class="card chart-card">
+        <h4>G2 · Investimento × Benefício por área (R$)</h4>
+        <div class="chart-wrapper">
+          <canvas id="chartG2" aria-label="Investimento versus Benefício por área" role="img"></canvas>
+        </div>
+      </section>
+
+      <section class="card chart-card">
+        <h4>G3 · Benefício por área e tipo (R$)</h4>
+        <div class="chart-wrapper">
+          <canvas id="chartG3" aria-label="Benefício por área e tipo" role="img"></canvas>
+        </div>
+      </section>
+
+      <section class="card chart-card">
+        <h4>G4 · Evolução mensal</h4>
+        <div class="chart-wrapper">
+          <canvas id="chartG4" aria-label="Evolução mensal de projetos criados e concluídos" role="img"></canvas>
+        </div>
+      </section>
+
+      <section class="card chart-card">
+        <h4>G5 · Distribuição por status e modalidade</h4>
+        <div class="chart-wrapper">
+          <canvas id="chartG5" aria-label="Distribuição por status e modalidade" role="img"></canvas>
+        </div>
+      </section>
+
+      <section class="card chart-card">
+        <h4>G6 · Cobertura por pilares</h4>
+        <div class="chart-wrapper">
+          <canvas id="chartG6" aria-label="Cobertura por pilares" role="img"></canvas>
+        </div>
+      </section>
+    </div>
   </section>
 
   <!-- ===== ABA 2: USUÁRIOS ===== -->
@@ -246,6 +291,6 @@
 
 <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
-<script type="module" src="admin.js?v=20261117-01"></script>
+<script type="module" src="admin.js?v=20261118-01"></script>
 </body>
 </html>

@@ -6,7 +6,7 @@
   <meta name="description" content="Kaizen Hub v2 — Gestão e execução de projetos de melhoria contínua (Standard Kaizen SOL-FR-0013).">
   <meta name="theme-color" content="#0A66FF">
   <title>Kaizen Hub · Gestão de Projetos</title>
-  <link rel="stylesheet" href="style.css?v=20261117-01">
+  <link rel="stylesheet" href="style.css?v=20261118-01">
 </head>
 <body>
 
@@ -39,7 +39,7 @@
     <span id="saveStatus" class="save-status" role="status" aria-live="polite"></span>
     <span id="userChip" class="chip"></span>
     <button type="button" id="btnMigrate" class="btn ghost small" title="Importar projetos da versão anterior">Migrar meus kaizens</button>
-    <a href="admin.html?v=20261117-01" id="linkAdmin" class="btn ghost small hidden">Painel executivo</a>
+    <a href="admin.html?v=20261118-01" id="linkAdmin" class="btn ghost small hidden">Painel executivo</a>
     <button type="button" id="btnLogout" class="btn ghost small">Sair</button>
   </div>
 </header>
@@ -184,279 +184,410 @@
     </div>
     <div class="proj-head-right">
       <span id="editorSaveStatus" class="save-status" role="status" aria-live="polite"></span>
+      <button type="button" id="btnToggleMode" class="btn ghost small" title="Alternar entre modo guiado e formulário completo">📋 Ver tudo</button>
       <button type="button" id="btnShare" class="btn ghost small">👥 Compartilhar</button>
       <button type="button" id="btnPrint" class="btn ghost small">🖨️ Imprimir / PDF</button>
       <button type="button" id="btnDelete" class="btn danger small">Excluir</button>
     </div>
   </div>
 
+  <!-- BARRA DO WIZARD (STEPPER & PROGRESSO) -->
+  <div id="wizardHeader" class="card wizard-header">
+    <div class="wizard-header-top">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="wizard-badge">Fluxo Guiado</span>
+        <strong id="wizardStepTitle" class="wizard-step-title">Etapa 0 · Identificação</strong>
+      </div>
+      <span id="wizardStepCount" class="wizard-step-count muted">Etapa 1 de 11</span>
+    </div>
+
+    <!-- Barra de Progresso Geral -->
+    <div class="wizard-progress-track" role="progressbar" id="wizardProgressBar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <div id="wizardProgressFill" class="wizard-progress-fill" style="width: 0%"></div>
+    </div>
+
+    <!-- Stepper Navegável (Etapas 0 a 10) -->
+    <div class="stepper-scroll">
+      <nav class="stepper-nav" role="tablist" aria-label="Etapas do formulário Kaizen">
+        <button type="button" class="step-btn active" data-step="0" role="tab" aria-selected="true" aria-current="step" title="0. Identificação">
+          <span class="step-num">0</span>
+          <span class="step-title">Identificação</span>
+        </button>
+        <button type="button" class="step-btn" data-step="1" role="tab" aria-selected="false" title="1. Incômodo">
+          <span class="step-num">1</span>
+          <span class="step-title">Incômodo</span>
+        </button>
+        <button type="button" class="step-btn" data-step="2" role="tab" aria-selected="false" title="2. Causas">
+          <span class="step-num">2</span>
+          <span class="step-title">Causas</span>
+        </button>
+        <button type="button" class="step-btn" data-step="3" role="tab" aria-selected="false" title="3. 5W2H">
+          <span class="step-num">3</span>
+          <span class="step-title">5W2H</span>
+        </button>
+        <button type="button" class="step-btn" data-step="4" role="tab" aria-selected="false" title="4. Meta">
+          <span class="step-num">4</span>
+          <span class="step-title">Meta</span>
+        </button>
+        <button type="button" class="step-btn" data-step="5" role="tab" aria-selected="false" title="5. Plano de ação">
+          <span class="step-num">5</span>
+          <span class="step-title">Plano</span>
+        </button>
+        <button type="button" class="step-btn" data-step="6" role="tab" aria-selected="false" title="6. Monitoramento">
+          <span class="step-num">6</span>
+          <span class="step-title">Monitoramento</span>
+        </button>
+        <button type="button" class="step-btn" data-step="7" role="tab" aria-selected="false" title="7. Padronização e Aprovação">
+          <span class="step-num">7</span>
+          <span class="step-title">Padronização</span>
+        </button>
+        <button type="button" class="step-btn" data-step="8" role="tab" aria-selected="false" title="8. Resultados">
+          <span class="step-num">8</span>
+          <span class="step-title">Resultados</span>
+        </button>
+        <button type="button" class="step-btn" data-step="9" role="tab" aria-selected="false" title="9. Riscos e Links">
+          <span class="step-num">9</span>
+          <span class="step-title">Riscos & Links</span>
+        </button>
+        <button type="button" class="step-btn" data-step="10" role="tab" aria-selected="false" title="10. Revisão e Conclusão">
+          <span class="step-num">10</span>
+          <span class="step-title">Revisão</span>
+        </button>
+      </nav>
+    </div>
+  </div>
+
   <form id="kaizenForm" class="kaizen">
 
-    <!-- Cabeçalho A3 Standard Kaizen -->
-    <section class="card header-card">
-      <div class="std-head">
-        <div>
-          <h3>STANDARD KAIZEN</h3>
-          <small class="muted">SOL-FR-0013 Rev00</small>
+    <!-- ETAPA 0: IDENTIFICAÇÃO -->
+    <div class="wizard-step active" data-step="0">
+      <section class="card header-card">
+        <div class="std-head">
+          <div>
+            <h3>STANDARD KAIZEN</h3>
+            <small class="muted">SOL-FR-0013 Rev00 · 0. Identificação do Projeto</small>
+          </div>
+          <fieldset class="pillars">
+            <legend class="sr-only">Pilares impactados</legend>
+            <label class="pilar"><input type="checkbox" data-f="pilar_seguranca"><span>Segurança</span></label>
+            <label class="pilar"><input type="checkbox" data-f="pilar_qualidade"><span>Qualidade</span></label>
+            <label class="pilar"><input type="checkbox" data-f="pilar_entrega"><span>Entrega</span></label>
+            <label class="pilar"><input type="checkbox" data-f="pilar_lucratividade"><span>Lucratividade</span></label>
+            <label class="pilar"><input type="checkbox" data-f="pilar_pessoas"><span>Pessoas</span></label>
+          </fieldset>
         </div>
-        <fieldset class="pillars">
-          <legend class="sr-only">Pilares impactados</legend>
-          <label class="pilar"><input type="checkbox" data-f="pilar_seguranca"><span>Segurança</span></label>
-          <label class="pilar"><input type="checkbox" data-f="pilar_qualidade"><span>Qualidade</span></label>
-          <label class="pilar"><input type="checkbox" data-f="pilar_entrega"><span>Entrega</span></label>
-          <label class="pilar"><input type="checkbox" data-f="pilar_lucratividade"><span>Lucratividade</span></label>
-          <label class="pilar"><input type="checkbox" data-f="pilar_pessoas"><span>Pessoas</span></label>
-        </fieldset>
-      </div>
 
-      <div class="grid-4">
-        <label>CÓDIGO DO KAIZEN
-          <input type="text" data-f="codigo" readonly tabindex="-1">
-        </label>
-        <label>PROJETO *
-          <input type="text" data-f="projeto" required placeholder="Nome do projeto">
-        </label>
-        <label>PROCESSO / ÁREA *
-          <input type="text" data-f="area" placeholder="Local/Área da melhoria">
-        </label>
-        <label>DATA *
-          <input type="date" data-f="data">
-        </label>
+        <div class="grid-4">
+          <label>CÓDIGO DO KAIZEN
+            <input type="text" data-f="codigo" readonly tabindex="-1">
+          </label>
+          <label>PROJETO *
+            <input type="text" data-f="projeto" required placeholder="Nome do projeto">
+          </label>
+          <label>PROCESSO / ÁREA *
+            <input type="text" data-f="area" placeholder="Local/Área da melhoria">
+          </label>
+          <label>DATA *
+            <input type="date" data-f="data">
+          </label>
 
-        <label>LÍDER DO KAIZEN *
-          <input type="text" data-f="lider" placeholder="Responsável">
-        </label>
-        <label class="span2">PARTICIPANTES (separados por ponto e vírgula)
-          <input type="text" data-f="participantes" placeholder="Ex.: Ana Souza; Carlos Lima">
-        </label>
-        <label>ÁREA DE NEGÓCIO *
-          <select data-f="areaNegocio">
-            <option value="">— Selecione —</option>
-            <option>Operação</option>
-            <option>DAF</option>
-            <option>EO</option>
-            <option>H&amp;S</option>
-            <option>Jurídico e Ética</option>
-            <option>P&amp;C</option>
-            <option>TI / Digital</option>
-            <option>Engenharia</option>
-          </select>
-        </label>
+          <label>LÍDER DO KAIZEN *
+            <input type="text" data-f="lider" placeholder="Responsável">
+          </label>
+          <label class="span2">PARTICIPANTES (separados por ponto e vírgula)
+            <input type="text" data-f="participantes" placeholder="Ex.: Ana Souza; Carlos Lima">
+          </label>
+          <label>ÁREA DE NEGÓCIO *
+            <select data-f="areaNegocio">
+              <option value="">— Selecione —</option>
+              <option>Operação</option>
+              <option>DAF</option>
+              <option>EO</option>
+              <option>H&amp;S</option>
+              <option>Jurídico e Ética</option>
+              <option>P&amp;C</option>
+              <option>TI / Digital</option>
+              <option>Engenharia</option>
+            </select>
+          </label>
 
-        <label>TIPO DE PROJETO
-          <select data-f="tipo">
-            <option value="kaizen">Kaizen</option>
-            <option value="performance">Performance</option>
-          </select>
-        </label>
-        <label>STATUS DO KAIZEN
-          <select data-f="status">
-            <option value="rascunho">Rascunho</option>
-            <option value="em_andamento">Em andamento</option>
-            <option value="concluido">Concluído</option>
-            <option value="cancelado">Cancelado</option>
-          </select>
-        </label>
-        <label>% CONCLUÍDA
-          <input type="number" data-f="percentual" min="0" max="100" step="5" placeholder="0">
-        </label>
-      </div>
-    </section>
-
-    <!-- Blocos 1, 3 e 5 -->
-    <div class="cols3">
-      <section class="card">
-        <h4>1. Incômodo / Oportunidade *</h4>
-        <p class="hint">Claro, conciso e mensurável. Inclua números quando possível.</p>
-        <label class="sr-only" for="fIncomodo">Incômodo ou oportunidade</label>
-        <textarea id="fIncomodo" data-f="incomodo" rows="7" placeholder="Descreva a oportunidade de melhoria..."></textarea>
-      </section>
-
-      <section class="card">
-        <h4>3. Meta / Objetivo / Estado futuro *</h4>
-        <p class="hint">Meta SMART: o que, quanto e até quando.</p>
-        <label class="sr-only" for="fMeta">Meta</label>
-        <textarea id="fMeta" data-f="meta" rows="7" placeholder="Ex.: Reduzir refugo de 4,2% para 1,5% até 31/12..."></textarea>
-      </section>
-
-      <section class="card">
-        <h4>5. Monitoramento e conclusões</h4>
-        <p class="hint">Evidências, marcos e resultados após as ações.</p>
-        <label class="sr-only" for="fMonit">Monitoramento</label>
-        <textarea id="fMonit" data-f="monitoramento" rows="7" placeholder="Acompanhamento semanal, indicadores..."></textarea>
+          <label>TIPO DE PROJETO
+            <select data-f="tipo">
+              <option value="kaizen">Kaizen</option>
+              <option value="performance">Performance</option>
+            </select>
+          </label>
+          <label>STATUS DO KAIZEN
+            <select data-f="status">
+              <option value="rascunho">Rascunho</option>
+              <option value="em_andamento">Em andamento</option>
+              <option value="concluido">Concluído</option>
+              <option value="cancelado">Cancelado</option>
+            </select>
+          </label>
+          <label>% CONCLUÍDA
+            <input type="number" data-f="percentual" min="0" max="100" step="5" placeholder="0">
+          </label>
+        </div>
       </section>
     </div>
 
-    <!-- Bloco 2 + Ferramenta 5W2H -->
-    <div class="cols2">
+    <!-- ETAPA 1: INCÔMODO / OPORTUNIDADE -->
+    <div class="wizard-step" data-step="1">
+      <section class="card">
+        <h4>1. Incômodo / Oportunidade *</h4>
+        <p class="hint">Descreva o problema ou oportunidade de forma clara, concisa e mensurável. Inclua números e perdas sempre que possível.</p>
+        <label class="sr-only" for="fIncomodo">Incômodo ou oportunidade</label>
+        <textarea id="fIncomodo" data-f="incomodo" rows="8" placeholder="Descreva a oportunidade de melhoria, desvios operacionais ou perdas observadas..."></textarea>
+      </section>
+    </div>
+
+    <!-- ETAPA 2: ANÁLISE DE CAUSAS -->
+    <div class="wizard-step" data-step="2">
       <section class="card">
         <h4>2. Análise das causas / Estado atual *</h4>
-        <p class="hint">5 porquês, Ishikawa (4M), Pareto, diagrama de causa e efeito.</p>
+        <p class="hint">Aplique ferramentas de causa raiz: 5 Porquês, Ishikawa (4M: Método, Máquina, Material, Mão de obra), Pareto ou diagrama de dispersão.</p>
         <label class="sr-only" for="fCausas">Análise das causas</label>
-        <textarea id="fCausas" data-f="causas" rows="7" placeholder="Causas raízes identificadas..."></textarea>
+        <textarea id="fCausas" data-f="causas" rows="8" placeholder="Descreva as causas raízes identificadas através dos 5 porquês ou análise de processo..."></textarea>
       </section>
+    </div>
 
+    <!-- ETAPA 3: FERRAMENTA 5W2H -->
+    <div class="wizard-step" data-step="3">
       <section class="card">
-        <h4>Ferramenta 5W2H</h4>
+        <h4>3. Ferramenta 5W2H</h4>
+        <p class="hint">Estruture os fundamentos da solução pretendida respondendo às perguntas-chave.</p>
         <div class="w5h2">
           <label>What (O quê?) *<input type="text" data-f="w_what" placeholder="O que será feito"></label>
-          <label>Where (Onde?)<input type="text" data-f="w_where" placeholder="Local"></label>
+          <label>Where (Onde?)<input type="text" data-f="w_where" placeholder="Local de implementação"></label>
           <label>When (Quando?)<input type="text" data-f="w_when" placeholder="Prazo geral"></label>
           <label>Who (Quem?)<input type="text" data-f="w_who" placeholder="Responsável"></label>
-          <label>Why (Por quê?)<input type="text" data-f="w_why" placeholder="Justificativa"></label>
-          <label>How (Como?) *<input type="text" data-f="w_how" placeholder="Método"></label>
+          <label>Why (Por quê?)<input type="text" data-f="w_why" placeholder="Justificativa da ação"></label>
+          <label>How (Como?) *<input type="text" data-f="w_how" placeholder="Método ou procedimento"></label>
           <label class="span2">How Much (Quanto?)<input type="text" data-f="w_howmuch" placeholder="Custo estimado"></label>
         </div>
       </section>
     </div>
 
-    <!-- Bloco 4: Plano de Ação (Cronograma Ilimitado) -->
-    <section class="card">
-      <div class="card-head">
-        <div>
-          <h4>4. Plano de ação (cronograma) *</h4>
-          <p class="hint">Adicione as ações necessárias para atingir a meta (ações ilimitadas).</p>
-        </div>
-        <button type="button" id="btnAddAction" class="btn small primary">+ Adicionar ação</button>
-      </div>
-
-      <div class="table-wrap">
-        <table id="actionTable">
-          <caption class="sr-only">Plano de ação do projeto</caption>
-          <thead>
-            <tr>
-              <th scope="col" style="width:40px">#</th>
-              <th scope="col">Ação</th>
-              <th scope="col" style="width:160px">Responsável</th>
-              <th scope="col" style="width:140px">Prazo</th>
-              <th scope="col" style="width:140px">Status</th>
-              <th scope="col" style="width:40px"><span class="sr-only">Remover</span></th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;flex-wrap:wrap;gap:8px">
-        <span class="hint">O % de conclusão pode ser calculado pelo plano:</span>
-        <button type="button" id="btnCalcPct" class="btn small ghost">Recalcular % pelas ações</button>
-      </div>
-    </section>
-
-    <!-- Blocos 6 e 7 -->
-    <div class="cols2">
+    <!-- ETAPA 4: META SMART -->
+    <div class="wizard-step" data-step="4">
       <section class="card">
-        <h4>6. Padronização</h4>
-        <p class="hint">Procedimentos, POP, check-lists, treinamentos, auditoria, SIPOC/RACI.</p>
-        <label class="sr-only" for="fPadron">Padronização</label>
-        <textarea id="fPadron" data-f="padronizacao" rows="6" placeholder="Documentos e normas atualizados..."></textarea>
+        <h4>4. Meta / Objetivo / Estado futuro *</h4>
+        <p class="hint">Meta SMART: Específica (o quê), Mensurável (quanto), Atingível, Relevante e Temporal (até quando).</p>
+        <label class="sr-only" for="fMeta">Meta</label>
+        <textarea id="fMeta" data-f="meta" rows="8" placeholder="Ex.: Reduzir o refugo na linha 3 de 4,2% para 1,5% até 31/12/2026..."></textarea>
       </section>
+    </div>
 
+    <!-- ETAPA 5: PLANO DE AÇÃO -->
+    <div class="wizard-step" data-step="5">
       <section class="card">
-        <h4>7. Aprovação e Expansão horizontal</h4>
-        <label>Aprovação (nome dos aprovadores)
-          <input type="text" data-f="aprovacao" placeholder="Ex.: Marina Alves (Gerente)">
-        </label>
-        <label>Status da aprovação
-          <select data-f="aprovacaoStatus">
-            <option value="pendente">Pendente</option>
-            <option value="aprovado">Aprovado</option>
-            <option value="rejeitado">Rejeitado</option>
-          </select>
-        </label>
-        <label class="inline-check" style="margin-top:12px">
-          <input type="checkbox" data-f="expansao"> Expansão horizontal aplicável
-        </label>
-        <label>Área / UO de replicação
-          <input type="text" data-f="expansaoArea" placeholder="Linha ou UO que pode replicar a melhoria">
+        <div class="card-head">
+          <div>
+            <h4>5. Plano de ação (cronograma) *</h4>
+            <p class="hint">Adicione as ações necessárias para atingir a meta (ações ilimitadas).</p>
+          </div>
+          <button type="button" id="btnAddAction" class="btn small primary">+ Adicionar ação</button>
+        </div>
+
+        <div class="table-wrap">
+          <table id="actionTable">
+            <caption class="sr-only">Plano de ação do projeto</caption>
+            <thead>
+              <tr>
+                <th scope="col" style="width:40px">#</th>
+                <th scope="col">Ação</th>
+                <th scope="col" style="width:160px">Responsável</th>
+                <th scope="col" style="width:140px">Prazo</th>
+                <th scope="col" style="width:140px">Status</th>
+                <th scope="col" style="width:40px"><span class="sr-only">Remover</span></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;flex-wrap:wrap;gap:8px">
+          <span class="hint">O % de conclusão pode ser calculado pelo plano:</span>
+          <button type="button" id="btnCalcPct" class="btn small ghost">Recalcular % pelas ações</button>
+        </div>
+      </section>
+    </div>
+
+    <!-- ETAPA 6: MONITORAMENTO -->
+    <div class="wizard-step" data-step="6">
+      <section class="card">
+        <h4>6. Monitoramento e conclusões</h4>
+        <p class="hint">Acompanhamento dos resultados pós-implementação, marcos, gráficos de tendência e lições aprendidas.</p>
+        <label class="sr-only" for="fMonit">Monitoramento</label>
+        <textarea id="fMonit" data-f="monitoramento" rows="8" placeholder="Acompanhamento semanal, indicadores chave pós-ação, estabilização dos ganhos..."></textarea>
+      </section>
+    </div>
+
+    <!-- ETAPA 7: PADRONIZAÇÃO + APROVAÇÃO/EXPANSÃO -->
+    <div class="wizard-step" data-step="7">
+      <div class="cols2">
+        <section class="card">
+          <h4>7. Padronização</h4>
+          <p class="hint">Procedimentos operacionais (POP), check-lists, treinamentos da equipe e matriz RACI.</p>
+          <label class="sr-only" for="fPadron">Padronização</label>
+          <textarea id="fPadron" data-f="padronizacao" rows="7" placeholder="Documentos e normas operacionais atualizados, treinamentos realizados..."></textarea>
+        </section>
+
+        <section class="card">
+          <h4>Aprovação e Expansão horizontal</h4>
+          <label>Aprovação (nome dos aprovadores)
+            <input type="text" data-f="aprovacao" placeholder="Ex.: Marina Alves (Gerente de Área)">
+          </label>
+          <label>Status da aprovação
+            <select data-f="aprovacaoStatus">
+              <option value="pendente">Pendente</option>
+              <option value="aprovado">Aprovado</option>
+              <option value="rejeitado">Rejeitado</option>
+            </select>
+          </label>
+          <label class="inline-check" style="margin-top:12px">
+            <input type="checkbox" data-f="expansao"> Expansão horizontal aplicável
+          </label>
+          <label>Área / UO de replicação
+            <input type="text" data-f="expansaoArea" placeholder="Linha ou UO que pode replicar a melhoria">
+          </label>
+        </section>
+      </div>
+    </div>
+
+    <!-- ETAPA 8: RESULTADOS (BUSINESS CASE) -->
+    <div class="wizard-step" data-step="8">
+      <section class="card">
+        <h4>8. Resultados (Business Case)</h4>
+        <p class="hint">Ganhos financeiros mensurados, investimento realizado e relação Benefício / Custo.</p>
+        <div class="grid-4">
+          <label>Benefício anual (R$)
+            <input type="number" step="0.01" min="0" data-f="beneficio" placeholder="0,00">
+          </label>
+          <label>Custo de implementação (R$)
+            <input type="number" step="0.01" min="0" data-f="custo" placeholder="0,00">
+          </label>
+          <label>B/C Ratio
+            <input type="text" id="bcRatio" readonly tabindex="-1" placeholder="—">
+          </label>
+          <label>Tipo de Benefício *
+            <select data-f="tipoBeneficio">
+              <option value="">— Selecione —</option>
+              <option value="hard_saving">Hard Saving (ganho real)</option>
+              <option value="cost_avoidance">Cost Avoidance (perda evitada)</option>
+            </select>
+          </label>
+        </div>
+        <label style="margin-top:8px">Observações do Business Case
+          <textarea data-f="bcObs" rows="4" placeholder="Premissas financeiras, payback, memórias de cálculo e comprovação de savings..."></textarea>
         </label>
       </section>
     </div>
 
-    <!-- Bloco 8: Resultados e Business Case -->
-    <section class="card">
-      <h4>8. Resultados (Business Case)</h4>
-      <div class="grid-4">
-        <label>Benefício anual (R$)
-          <input type="number" step="0.01" min="0" data-f="beneficio" placeholder="0,00">
-        </label>
-        <label>Custo de implementação (R$)
-          <input type="number" step="0.01" min="0" data-f="custo" placeholder="0,00">
-        </label>
-        <label>B/C Ratio
-          <input type="text" id="bcRatio" readonly tabindex="-1" placeholder="—">
-        </label>
-        <label>Tipo de Benefício *
-          <select data-f="tipoBeneficio">
-            <option value="">— Selecione —</option>
-            <option value="hard_saving">Hard Saving (ganho real)</option>
-            <option value="cost_avoidance">Cost Avoidance (perda evitada)</option>
-          </select>
-        </label>
-      </div>
-      <label style="margin-top:8px">Observações do Business Case
-        <textarea data-f="bcObs" rows="3" placeholder="Premissas financeiras, payback, memórias de cálculo..."></textarea>
-      </label>
-    </section>
+    <!-- ETAPA 9: RISCOS + LINKS -->
+    <div class="wizard-step" data-step="9">
+      <div class="cols2">
+        <!-- Análise de Riscos (Ilimitada) -->
+        <section class="card">
+          <div class="card-head">
+            <div>
+              <h4>Análise de riscos e oportunidades</h4>
+              <p class="hint">Severidade (1-4) × Probabilidade (1-4) = Score (1-16)</p>
+            </div>
+            <button type="button" id="btnAddRisk" class="btn small primary">+ Adicionar risco</button>
+          </div>
 
-    <!-- Análise de Riscos (Ilimitada) -->
-    <section class="card">
-      <div class="card-head">
-        <div>
-          <h4>Análise de riscos e oportunidades</h4>
-          <p class="hint">Severidade (1-4) × Probabilidade (1-4) = Score (1-16)</p>
+          <div class="table-wrap">
+            <table id="riskTable">
+              <caption class="sr-only">Riscos e oportunidades</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Descrição</th>
+                  <th scope="col" style="width:75px">Sev.</th>
+                  <th scope="col" style="width:75px">Prob.</th>
+                  <th scope="col" style="width:65px">Score</th>
+                  <th scope="col">Mitigação</th>
+                  <th scope="col" style="width:110px">Resp.</th>
+                  <th scope="col" style="width:36px"><span class="sr-only">Remover</span></th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Links e Referências com Indexação -->
+        <section class="card">
+          <div class="card-head">
+            <div>
+              <h4>Links e referências indexadas</h4>
+              <p class="hint">Links para SharePoint, OneDrive, dashboards ou documentação técnica.</p>
+            </div>
+            <button type="button" id="btnAddLink" class="btn small primary">+ Adicionar link</button>
+          </div>
+
+          <div class="table-wrap">
+            <table id="linksTable">
+              <caption class="sr-only">Links e referências do projeto</caption>
+              <thead>
+                <tr>
+                  <th scope="col" style="width:140px">Título</th>
+                  <th scope="col">URL</th>
+                  <th scope="col" style="width:90px">Tipo</th>
+                  <th scope="col" style="width:70px">Ações</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- ETAPA 10: REVISÃO E CONCLUIR -->
+    <div class="wizard-step" data-step="10">
+      <section class="card wizard-review-card">
+        <div class="review-header">
+          <div>
+            <h4>10. Revisão geral e conclusão do Kaizen</h4>
+            <p class="hint">Confira o status de preenchimento dos blocos para submissão final do projeto Standard Kaizen SOL-FR-0013.</p>
+          </div>
+          <span id="reviewStatusPill" class="pill">Em andamento</span>
         </div>
-        <button type="button" id="btnAddRisk" class="btn small primary">+ Adicionar risco</button>
-      </div>
 
-      <div class="table-wrap">
-        <table id="riskTable">
-          <caption class="sr-only">Riscos e oportunidades</caption>
-          <thead>
-            <tr>
-              <th scope="col">Descrição do risco</th>
-              <th scope="col" style="width:110px">Severidade</th>
-              <th scope="col" style="width:110px">Probabilidade</th>
-              <th scope="col" style="width:80px">Score</th>
-              <th scope="col">Ação de mitigação</th>
-              <th scope="col" style="width:150px">Responsável</th>
-              <th scope="col" style="width:40px"><span class="sr-only">Remover</span></th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- Links e Referências com Indexação -->
-    <section class="card">
-      <div class="card-head">
-        <div>
-          <h4>Links e referências indexadas</h4>
-          <p class="hint">Links para SharePoint, OneDrive, dashboards ou documentação técnica (incluídos na busca).</p>
+        <!-- Checklist de Requisitos -->
+        <div class="review-checklist" id="reviewChecklist">
+          <!-- Gerado dinamicamente via JS -->
         </div>
-        <button type="button" id="btnAddLink" class="btn small primary">+ Adicionar link</button>
-      </div>
 
-      <div class="table-wrap">
-        <table id="linksTable">
-          <caption class="sr-only">Links e referências do projeto</caption>
-          <thead>
-            <tr>
-              <th scope="col" style="width:180px">Título</th>
-              <th scope="col">URL</th>
-              <th scope="col" style="width:120px">Categoria</th>
-              <th scope="col" style="width:160px">Tags</th>
-              <th scope="col" style="width:80px">Busca</th>
-              <th scope="col" style="width:100px">Ações</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </section>
+        <!-- Ação de Conclusão -->
+        <div class="review-actions-box" id="reviewActionsBox">
+          <div id="reviewNotice" class="review-notice"></div>
+          <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:14px">
+            <button type="button" id="btnFinishKaizen" class="btn primary" style="padding:10px 22px;font-size:15px;font-weight:700">🏆 Concluir Kaizen</button>
+            <span class="muted" style="font-size:12px">Ao concluir, o status passa a Concluído e a validação completa é selada.</span>
+          </div>
+        </div>
+      </section>
+    </div>
 
   </form>
+
+  <!-- BARRA DE NAVEGAÇÃO ENTRE ETAPAS (WIZARD NAV) -->
+  <div id="wizardNav" class="card wizard-nav-bar">
+    <div class="wizard-nav-left">
+      <button type="button" id="btnStepPrev" class="btn ghost">← Voltar</button>
+    </div>
+    <div class="wizard-nav-center">
+      <span id="wizardStepFooterLabel" class="muted">Etapa 1 de 11</span>
+      <div id="wizardInlineMsg" class="wizard-inline-msg hidden" role="alert"></div>
+    </div>
+    <div class="wizard-nav-right">
+      <button type="button" id="btnStepSave" class="btn ghost">💾 Salvar rascunho</button>
+      <button type="button" id="btnStepNext" class="btn primary">Próximo →</button>
+    </div>
+  </div>
 </main>
 
 <!-- MODAL PARA ADICIONAR LINK -->
@@ -503,7 +634,7 @@
 <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
 <!-- SCRIPTS EM MÓDULOS ES NATIVOS -->
-<script type="module" src="app.js?v=20261117-01"></script>
+<script type="module" src="app.js?v=20261118-01"></script>
 
 </body>
 </html>

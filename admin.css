@@ -176,44 +176,40 @@ td.num, th.num {
   font-size: 11px;
 }
 
-/* Gráfico de Barras Nativo */
-.native-chart {
+/* ---------- Gráficos Executivos (Chart.js) ---------- */
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-top: 16px;
+}
+
+@media (max-width: 1023px) {
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.chart-card {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-top: 14px;
 }
-.chart-row {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  font-size: 12px;
-}
-.chart-label {
-  width: 140px;
-  font-weight: 600;
-  color: var(--ink);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.chart-bar-wrap {
-  flex: 1;
-  background: var(--surface-2);
-  border-radius: 8px;
-  height: 22px;
-  overflow: hidden;
-  position: relative;
-}
-.chart-bar-fill {
-  height: 100%;
-  border-radius: 8px;
-  background: linear-gradient(90deg, var(--brand), #00C2FF);
-  transition: width 0.3s;
-}
-.chart-val {
-  min-width: 110px;
-  text-align: right;
+
+.chart-card h4 {
+  margin-bottom: 12px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--ink);
+}
+
+.chart-wrapper {
+  position: relative;
+  height: 290px; /* fixo entre 280px e 320px */
+  width: 100%;
+}
+
+.chart-empty {
+  text-align: center;
+  padding: 36px 16px;
+  margin-top: 16px;
 }
