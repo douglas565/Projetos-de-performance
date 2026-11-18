@@ -23,6 +23,7 @@ import {
 import {
   createDefaultKaizen,
   validateKaizen,
+  validateWizardStep,
   calculateBcRatio,
   calculatePercentualFromActions,
   calculateRiskScore,
@@ -43,9 +44,11 @@ import {
 } from "./js/ui.js";
 import { openSharingModal } from "./js/share.js";
 
-// ---------- Atalhos de Seleção ----------
+// ---------- Atalhos de Seleção e Formatação ----------
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => document.querySelectorAll(s);
+const BRL = (n) => (Number(n) || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const PCT = (n) => `${(Number(n) || 0).toFixed(0)}%`;
 
 // ---------- Estado Global da Aplicação ----------
 let currentUser = null;
@@ -54,6 +57,22 @@ let allHubKaizens = [];
 let activeKaizen = null;
 let unsubHub = null;
 let authMode = "signin";
+let currentWizardStep = 0;
+let editorMode = "wizard";
+
+const STEP_TITLES = [
+  "Etapa 0 · Identificação do Projeto",
+  "Etapa 1 · Incômodo / Oportunidade",
+  "Etapa 2 · Análise das Causas",
+  "Etapa 3 · Ferramenta 5W2H",
+  "Etapa 4 · Meta SMART",
+  "Etapa 5 · Plano de Ação",
+  "Etapa 6 · Monitoramento e Conclusões",
+  "Etapa 7 · Padronização e Aprovação",
+  "Etapa 8 · Resultados (Business Case)",
+  "Etapa 9 · Riscos e Links",
+  "Etapa 10 · Revisão e Concluir"
+];
 
 // ============================================================
 // 1. INICIALIZAÇÃO
@@ -73,6 +92,27 @@ document.addEventListener("DOMContentLoaded", () => {
   setupEditorUI();
 
   // Inicia observação do estado de autenticação
+  const urlParams = new URLSearchParams(window.location.search);
+  const isMock = urlParams.get("mock") === "1" || urlParams.get("demo") === "1" || urlParams.get("editor") === "1" || Boolean(window.__MOCK_EDITOR__);
+
+  if (isMock) {
+    const mockUser = { uid: "mock-user", email: "user@empresa.com", displayName: "Usuário Teste" };
+    const mockProfile = { uid: "mock-user", email: "user@empresa.com", nome: "Usuário Teste", role: "admin", status: "active" };
+    currentUser = mockUser;
+    currentUserProfile = mockProfile;
+    $("#userChip").textContent = "Usuário Teste";
+    const sampleKaizen = createDefaultKaizen(mockUser);
+    sampleKaizen.id = "mock-kaizen-demo";
+    sampleKaizen.projeto = "Implementação Kaizen V2";
+    sampleKaizen.area = "Linha de Produção";
+    sampleKaizen.data = new Date().toISOString().split("T")[0];
+    sampleKaizen.lider = "Usuário Teste";
+    sampleKaizen.areaNegocio = "Operação";
+    sampleKaizen.etapaAtual = 0;
+    openEditor(sampleKaizen, false);
+    return;
+  }
+
   initAuth((firebaseUser, profile) => {
     currentUser = firebaseUser;
     currentUserProfile = profile;
@@ -563,6 +603,80 @@ function setupEditorUI() {
   $("#kaizenForm").addEventListener("change", (e) => {
     handleFieldInput(e.target);
   });
+
+  // ---------- Controles do Fluxo Guiado (Wizard) ----------
+  $("#btnToggleMode").onclick = () => {
+    const next = editorMode === "wizard" ? "full" : "wizard";
+    setEditorMode(next);
+  };
+
+  $$(".step-btn").forEach((btn) => {
+    btn.onclick = () => {
+      const target = Number(btn.dataset.step) || 0;
+      goToWizardStep(target);
+    };
+  });
+
+  const stepperNav = $(".stepper-nav");
+  if (stepperNav) {
+    stepperNav.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        goToWizardStep(Math.min(10, currentWizardStep + 1), true);
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        goToWizardStep(Math.max(0, currentWizardStep - 1), false);
+      }
+    });
+  }
+
+  $("#btnStepPrev").onclick = () => {
+    goToWizardStep(currentWizardStep - 1, false);
+  };
+
+  $("#btnStepNext").onclick = () => {
+    if (currentWizardStep >= 10) {
+      renderReviewStep();
+      showToast("Você já está na etapa de revisão final.", "info");
+      return;
+    }
+    goToWizardStep(currentWizardStep + 1, true);
+  };
+
+  $("#btnStepSave").onclick = () => {
+    if (!activeKaizen || !activeKaizen.id) return;
+    triggerSave();
+    showWizardInlineMsg("✓ Rascunho salvo com sucesso!", "ok", 3000);
+  };
+
+  $("#btnFinishKaizen").onclick = () => {
+    if (!activeKaizen) return;
+    const canEdit = canUserEdit(activeKaizen, currentUser, currentUserProfile);
+    if (!canEdit) {
+      showToast("Você tem permissão apenas de leitura.", "warning");
+      return;
+    }
+
+    const val = validateKaizen(activeKaizen, true);
+    if (!val.valid) {
+      showWizardInlineMsg(val.errors.join(" · "), "danger", 6000);
+      renderReviewStep();
+      return;
+    }
+
+    activeKaizen.status = "concluido";
+    activeKaizen.percentual = 100;
+    const selStatus = document.querySelector('[data-f="status"]');
+    if (selStatus) selStatus.value = "concluido";
+    const inPct = document.querySelector('[data-f="percentual"]');
+    if (inPct) inPct.value = 100;
+
+    $("#editorStatusPill").textContent = formatStatus("concluido");
+    triggerSave();
+    renderReviewStep();
+    showToast("🎉 Parabéns! Kaizen concluído com sucesso!", "ok");
+    showWizardInlineMsg("🏆 Projeto marcado como CONCLUÍDO!", "ok", 5000);
+  };
 }
 
 function openEditor(kaizen, isNew = false) {
@@ -580,11 +694,337 @@ function openEditor(kaizen, isNew = false) {
   showView("project");
   populateEditorForm(activeKaizen, canEdit);
 
+  // Inicializa o modo do editor (wizard por padrão) e restaura etapa salva
+  const savedMode = localStorage.getItem("kaizen_editor_mode") || "wizard";
+  setEditorMode(savedMode);
+
+  const savedStep = typeof activeKaizen.etapaAtual === "number" && activeKaizen.etapaAtual >= 0 && activeKaizen.etapaAtual <= 10
+    ? activeKaizen.etapaAtual
+    : 0;
+  goToWizardStep(savedStep, false);
+
+  if (!canEdit) {
+    $("#btnStepSave")?.setAttribute("disabled", "disabled");
+    $("#btnFinishKaizen")?.setAttribute("disabled", "disabled");
+  } else {
+    $("#btnStepSave")?.removeAttribute("disabled");
+    $("#btnFinishKaizen")?.removeAttribute("disabled");
+  }
+
   if (isNew) {
     setSaveStatus("dirty");
     triggerSave();
   } else {
     setSaveStatus("saved");
+  }
+}
+
+// ============================================================
+// 5.1. CONTROLADOR DO FLUXO GUIADO (WIZARD)
+// ============================================================
+function setEditorMode(mode) {
+  editorMode = mode;
+  const viewProj = $("#viewProject");
+  const formEl = $("#kaizenForm");
+  const btnToggle = $("#btnToggleMode");
+
+  if (mode === "full") {
+    viewProj?.classList.add("mode-full");
+    formEl?.classList.add("mode-full");
+    if (btnToggle) {
+      btnToggle.textContent = "🧙 Modo guiado";
+      btnToggle.title = "Voltar ao fluxo guiado passo a passo";
+    }
+  } else {
+    viewProj?.classList.remove("mode-full");
+    formEl?.classList.remove("mode-full");
+    if (btnToggle) {
+      btnToggle.textContent = "📋 Ver tudo";
+      btnToggle.title = "Ver todo o formulário de uma vez (modo avançado)";
+    }
+    goToWizardStep(currentWizardStep, false);
+  }
+  try {
+    localStorage.setItem("kaizen_editor_mode", mode);
+  } catch (_) {}
+}
+
+function showWizardInlineMsg(msg, type = "danger", timeoutMs = 5000) {
+  const el = $("#wizardInlineMsg");
+  if (!el) return;
+
+  if (!msg) {
+    el.classList.add("hidden");
+    el.textContent = "";
+    el.className = "wizard-inline-msg hidden";
+    return;
+  }
+
+  el.className = `wizard-inline-msg ${type}`;
+  el.textContent = msg;
+  el.classList.remove("hidden");
+
+  if (timeoutMs > 0) {
+    setTimeout(() => {
+      if (el.textContent === msg) {
+        el.classList.add("hidden");
+      }
+    }, timeoutMs);
+  }
+}
+
+function goToWizardStep(targetStep, shouldValidate = true) {
+  const clampedStep = Math.max(0, Math.min(10, Number(targetStep) || 0));
+
+  const canEdit = canUserEdit(activeKaizen, currentUser, currentUserProfile);
+
+  // Validação dos obrigatórios da etapa atual ao tentar avançar
+  if (canEdit && shouldValidate && clampedStep > currentWizardStep) {
+    const val = validateWizardStep(activeKaizen, currentWizardStep);
+    if (!val.valid) {
+      showWizardInlineMsg(`⚠️ ${val.errors.join(" · ")}`, "danger", 6000);
+
+      // Foco no primeiro campo com erro
+      const firstSection = document.querySelector(`.wizard-step[data-step="${currentWizardStep}"]`);
+      if (firstSection) {
+        const firstInput = firstSection.querySelector("input:invalid, textarea:invalid, select:invalid, input[required], textarea[required]");
+        if (firstInput) firstInput.focus();
+      }
+      return false;
+    }
+  }
+
+  showWizardInlineMsg(null);
+  currentWizardStep = clampedStep;
+
+  // Atualiza stepper visual e acessibilidade
+  $$(".step-btn").forEach((btn) => {
+    const s = Number(btn.dataset.step);
+    if (s === currentWizardStep) {
+      btn.classList.add("active");
+      btn.classList.remove("completed");
+      btn.setAttribute("aria-selected", "true");
+      btn.setAttribute("aria-current", "step");
+    } else if (s < currentWizardStep) {
+      btn.classList.remove("active");
+      btn.classList.add("completed");
+      btn.setAttribute("aria-selected", "false");
+      btn.removeAttribute("aria-current");
+    } else {
+      btn.classList.remove("active", "completed");
+      btn.setAttribute("aria-selected", "false");
+      btn.removeAttribute("aria-current");
+    }
+  });
+
+  // Alterna as seções visíveis no modo wizard
+  $$(".wizard-step").forEach((sec) => {
+    const s = Number(sec.dataset.step);
+    if (s === currentWizardStep) {
+      sec.classList.add("active");
+    } else {
+      sec.classList.remove("active");
+    }
+  });
+
+  // Atualiza contadores e barra de progresso
+  const countText = `Etapa ${currentWizardStep + 1} de 11`;
+  const stepCountEl = $("#wizardStepCount");
+  if (stepCountEl) stepCountEl.textContent = countText;
+  const footLabelEl = $("#wizardStepFooterLabel");
+  if (footLabelEl) footLabelEl.textContent = countText;
+
+  const stepTitleEl = $("#wizardStepTitle");
+  if (stepTitleEl) stepTitleEl.textContent = STEP_TITLES[currentWizardStep] || countText;
+
+  const pct = Math.round((currentWizardStep / 10) * 100);
+  const progFill = $("#wizardProgressFill");
+  if (progFill) progFill.style.width = `${pct}%`;
+  const progBar = $("#wizardProgressBar");
+  if (progBar) progBar.setAttribute("aria-valuenow", String(pct));
+
+  // Ajusta botões Voltar / Próximo
+  const prevBtn = $("#btnStepPrev");
+  if (prevBtn) prevBtn.disabled = (currentWizardStep === 0);
+
+  const nextBtn = $("#btnStepNext");
+  if (nextBtn) {
+    nextBtn.textContent = currentWizardStep === 10 ? "Revisar ✓" : "Próximo →";
+  }
+
+  // Renderiza checklist se for etapa 10
+  if (currentWizardStep === 10) {
+    renderReviewStep();
+  }
+
+  // Salva a etapa atual no documento Kaizen (autosave normal)
+  if (canEdit && activeKaizen && activeKaizen.id) {
+    activeKaizen.etapaAtual = currentWizardStep;
+    triggerSave();
+  }
+
+  // Rola suavemente para o topo do formulário
+  if (editorMode === "wizard") {
+    $("#wizardHeader")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  return true;
+}
+
+function renderReviewStep() {
+  const container = $("#reviewChecklist");
+  const pill = $("#reviewStatusPill");
+  const noticeBox = $("#reviewNotice");
+  const btnFinish = $("#btnFinishKaizen");
+
+  if (!container || !activeKaizen) return;
+
+  const canEdit = canUserEdit(activeKaizen, currentUser, currentUserProfile);
+
+  if (pill) {
+    pill.textContent = formatStatus(activeKaizen.status);
+  }
+
+  // 10 Itens de Verificação SOL-FR-0013
+  const items = [
+    {
+      step: 0,
+      title: "0. Identificação do Projeto",
+      desc: activeKaizen.projeto ? `${activeKaizen.codigo || "KZ"} · ${activeKaizen.projeto} (${activeKaizen.areaNegocio || "Área"})` : "Nome do projeto não informado.",
+      pass: Boolean(activeKaizen.projeto?.trim() && activeKaizen.area?.trim() && activeKaizen.data && activeKaizen.lider?.trim() && activeKaizen.areaNegocio)
+    },
+    {
+      step: 1,
+      title: "1. Incômodo / Oportunidade",
+      desc: activeKaizen.incomodo ? (activeKaizen.incomodo.length > 70 ? activeKaizen.incomodo.substring(0, 70) + "..." : activeKaizen.incomodo) : "Nenhum incômodo registrado.",
+      pass: Boolean(activeKaizen.incomodo?.trim())
+    },
+    {
+      step: 2,
+      title: "2. Análise de Causas",
+      desc: activeKaizen.causas ? (activeKaizen.causas.length > 70 ? activeKaizen.causas.substring(0, 70) + "..." : activeKaizen.causas) : "Causas raízes não analisadas.",
+      pass: Boolean(activeKaizen.causas?.trim())
+    },
+    {
+      step: 3,
+      title: "3. Ferramenta 5W2H",
+      desc: activeKaizen.w2h?.what ? `What: ${activeKaizen.w2h.what}` : "What/How não preenchidos.",
+      pass: Boolean(activeKaizen.w2h?.what?.trim() && activeKaizen.w2h?.how?.trim())
+    },
+    {
+      step: 4,
+      title: "4. Meta SMART",
+      desc: activeKaizen.meta ? (activeKaizen.meta.length > 70 ? activeKaizen.meta.substring(0, 70) + "..." : activeKaizen.meta) : "Meta SMART não definida.",
+      pass: Boolean(activeKaizen.meta?.trim())
+    },
+    {
+      step: 5,
+      title: "5. Plano de Ação",
+      desc: (() => {
+        const total = Array.isArray(activeKaizen.acoes) ? activeKaizen.acoes.length : 0;
+        const concl = Array.isArray(activeKaizen.acoes) ? activeKaizen.acoes.filter((a) => a.status === "concluida").length : 0;
+        return total > 0 ? `${total} ação(ões) · ${concl} concluída(s) (${Math.round((concl / total) * 100)}%)` : "Nenhuma ação cadastrada.";
+      })(),
+      pass: Boolean(Array.isArray(activeKaizen.acoes) && activeKaizen.acoes.length > 0 && activeKaizen.acoes.every((a) => a && a.status === "concluida"))
+    },
+    {
+      step: 6,
+      title: "6. Monitoramento",
+      desc: activeKaizen.monitoramento ? "Acompanhamento preenchido." : "Acompanhamento opcional pendente.",
+      pass: Boolean(activeKaizen.monitoramento?.trim())
+    },
+    {
+      step: 7,
+      title: "7. Padronização e Aprovação",
+      desc: `${activeKaizen.padronizacao ? "POP/Padronização OK" : "Sem POP"} · Aprovação: ${activeKaizen.aprovacao || "Pendente"}`,
+      pass: Boolean(activeKaizen.padronizacao?.trim() && activeKaizen.aprovacao?.trim())
+    },
+    {
+      step: 8,
+      title: "8. Resultados (Business Case)",
+      desc: `Benefício: ${BRL(activeKaizen.beneficio)} · Custo: ${BRL(activeKaizen.custo)} · B/C: ${activeKaizen.bcRatio !== null ? activeKaizen.bcRatio + "x" : "—"}`,
+      pass: Boolean(Number(activeKaizen.beneficio) > 0 ? Boolean(activeKaizen.tipoBeneficio) : true)
+    },
+    {
+      step: 9,
+      title: "9. Riscos e Links",
+      desc: `${Array.isArray(activeKaizen.riscos) ? activeKaizen.riscos.length : 0} risco(s) · ${Array.isArray(activeKaizen.links) ? activeKaizen.links.length : 0} link(s)`,
+      pass: true
+    }
+  ];
+
+  container.replaceChildren();
+  items.forEach((item) => {
+    const card = document.createElement("div");
+    card.className = `review-item ${item.pass ? "pass" : "fail"}`;
+
+    const icon = document.createElement("span");
+    icon.className = "review-icon";
+    icon.textContent = item.pass ? "✓" : "⚠️";
+
+    const content = document.createElement("div");
+    content.className = "review-item-content";
+
+    const title = document.createElement("div");
+    title.className = "review-item-title";
+    title.textContent = item.title;
+
+    const desc = document.createElement("div");
+    desc.className = "review-item-desc";
+    desc.textContent = item.desc;
+
+    content.appendChild(title);
+    content.appendChild(desc);
+
+    const btnJump = document.createElement("button");
+    btnJump.type = "button";
+    btnJump.className = "review-btn-jump";
+    btnJump.textContent = `Ir para etapa ${item.step}`;
+    btnJump.onclick = () => goToWizardStep(item.step, false);
+    content.appendChild(btnJump);
+
+    card.appendChild(icon);
+    card.appendChild(content);
+    container.appendChild(card);
+  });
+
+  const finalVal = validateKaizen(activeKaizen, true);
+
+  if (noticeBox) noticeBox.replaceChildren();
+
+  if (activeKaizen.status === "concluido") {
+    if (noticeBox) {
+      const span = document.createElement("span");
+      span.style.color = "var(--ok)";
+      span.textContent = "✓ Este Kaizen já está concluído com sucesso.";
+      noticeBox.appendChild(span);
+    }
+    if (btnFinish) {
+      btnFinish.disabled = true;
+      btnFinish.textContent = "✓ Kaizen Concluído";
+    }
+  } else if (finalVal.valid) {
+    if (noticeBox) {
+      const span = document.createElement("span");
+      span.style.color = "var(--ok)";
+      span.textContent = "✓ Todos os requisitos foram preenchidos com sucesso! O projeto está pronto para conclusão.";
+      noticeBox.appendChild(span);
+    }
+    if (btnFinish) {
+      btnFinish.disabled = !canEdit;
+      btnFinish.textContent = "🏆 Concluir Kaizen";
+    }
+  } else {
+    if (noticeBox) {
+      const span = document.createElement("span");
+      span.style.color = "var(--danger)";
+      span.textContent = `⚠️ Há ${finalVal.errors.length} pendência(s) para conclusão: ${finalVal.errors.join("; ")}`;
+      noticeBox.appendChild(span);
+    }
+    if (btnFinish) {
+      btnFinish.disabled = true;
+      btnFinish.textContent = "🏆 Concluir Kaizen (Pendências)";
+    }
   }
 }
 

@@ -174,6 +174,7 @@ export function createDefaultKaizen(user = {}) {
     schemaVersion: 2,
     rev: 1,
     codigo: generateKaizenCode(),
+    etapaAtual: 0,
     projeto: "",
     area: "",
     data: today,
@@ -298,6 +299,93 @@ export function validateKaizen(kaizen, isFinal = false) {
 }
 
 /**
+ * Validação de campos por etapa do fluxo guiado (wizard).
+ * step: 0 a 10
+ * Retorna { valid: boolean, errors: string[] }
+ */
+export function validateWizardStep(kaizen, step) {
+  const errors = [];
+  if (!kaizen) {
+    return { valid: false, errors: ["Documento inexistente."] };
+  }
+
+  const s = Number(step) || 0;
+
+  if (s === 0) {
+    // 0: Identificação
+    if (!kaizen.projeto || !kaizen.projeto.trim()) {
+      errors.push("Informe o nome do projeto.");
+    }
+    if (!kaizen.area || !kaizen.area.trim()) {
+      errors.push("Informe o processo ou área da melhoria.");
+    }
+    if (!kaizen.data) {
+      errors.push("Informe a data do projeto.");
+    }
+    if (!kaizen.lider || !kaizen.lider.trim()) {
+      errors.push("Informe o líder do kaizen.");
+    }
+    if (!kaizen.areaNegocio) {
+      errors.push("Selecione a área de negócio.");
+    }
+  } else if (s === 1) {
+    // 1: Incômodo / Oportunidade
+    if (!kaizen.incomodo || !kaizen.incomodo.trim()) {
+      errors.push("Preencha a descrição do incômodo ou oportunidade (bloco 1).");
+    }
+  } else if (s === 2) {
+    // 2: Análise das causas
+    if (!kaizen.causas || !kaizen.causas.trim()) {
+      errors.push("Preencha a análise das causas raízes (bloco 2).");
+    }
+  } else if (s === 3) {
+    // 3: 5W2H
+    const w = kaizen.w2h || {};
+    if (!w.what || !w.what.trim()) {
+      errors.push("Preencha o campo 'What (O quê?)' no 5W2H.");
+    }
+    if (!w.how || !w.how.trim()) {
+      errors.push("Preencha o campo 'How (Como?)' no 5W2H.");
+    }
+  } else if (s === 4) {
+    // 4: Meta SMART
+    if (!kaizen.meta || !kaizen.meta.trim()) {
+      errors.push("Preencha a meta SMART (bloco 3).");
+    }
+  } else if (s === 5) {
+    // 5: Plano de ação
+    if (Array.isArray(kaizen.acoes) && kaizen.acoes.length > 0) {
+      const semTexto = kaizen.acoes.some((a) => !a || !a.acao || !a.acao.trim());
+      if (semTexto) {
+        errors.push("Preencha a descrição de todas as ações adicionadas ao plano.");
+      }
+    }
+  } else if (s === 6) {
+    // 6: Monitoramento
+    // Opcional durante rascunho
+  } else if (s === 7) {
+    // 7: Padronização + Aprovação / Expansão
+    if (kaizen.expansao && (!kaizen.expansaoArea || !kaizen.expansaoArea.trim())) {
+      errors.push("Informe a área/UO para expansão horizontal.");
+    }
+  } else if (s === 8) {
+    // 8: Resultados (Business Case)
+    const b = Number(kaizen.beneficio) || 0;
+    if (b > 0 && !kaizen.tipoBeneficio) {
+      errors.push("Informe o tipo de benefício (Hard Saving ou Cost Avoidance).");
+    }
+  } else if (s === 9) {
+    // 9: Riscos e Links
+    // Opcionais durante rascunho
+  } else if (s === 10) {
+    // 10: Revisão e Conclusão
+    return validateKaizen(kaizen, true);
+  }
+
+  return { valid: errors.length === 0, errors };
+}
+
+/**
  * Verifica permissão de leitura
  */
 export function canUserRead(kaizen, user, userProfile) {
@@ -419,6 +507,7 @@ export function migrateLegacyProject(legacy, user = {}) {
     schemaVersion: 2,
     rev: Number(legacy.rev) || 1,
     codigo: legacy.codigo || generateKaizenCode(),
+    etapaAtual: Number(legacy.etapaAtual) || 0,
     projeto: legacy.projeto || legacy.Projeto || "Projeto Migrado",
     area: legacy.area || legacy.Area || "",
     data: legacy.data || legacy.Data || new Date().toISOString().split("T")[0],
