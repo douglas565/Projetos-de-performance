@@ -2,8 +2,6 @@
 // js/ui.js — Componentes de UI, Notificações, Modais e Tema
 // ============================================================
 
-export const CURRENT_CLIENT_BUILD = "20261117-01";
-
 let toastTimer = null;
 let hasUnsavedChanges = false;
 
@@ -212,47 +210,6 @@ export function applyTheme(theme) {
     btn.textContent = theme === "dark" ? "☀️ Tema claro" : "🌙 Tema escuro";
     btn.setAttribute("aria-label", theme === "dark" ? "Alternar para tema claro" : "Alternar para tema escuro");
   }
-}
-
-/**
- * Verificação de versão do site (version.json com cache no-store)
- */
-export function initVersionProbe() {
-  async function checkVersion() {
-    try {
-      const res = await fetch(`version.json?t=${Date.now()}`, { cache: "no-store" });
-      if (!res.ok) return;
-      const data = await res.json();
-      if (data && data.build && data.build !== CURRENT_CLIENT_BUILD) {
-        showVersionUpdateBanner(data);
-      }
-    } catch (e) {
-      // Ignora falhas de rede na checagem de versão
-    }
-  }
-
-  // Verifica ao carregar e quando a janela ganha foco
-  checkVersion();
-  window.addEventListener("focus", checkVersion);
-  setInterval(checkVersion, 5 * 60 * 1000); // a cada 5 min
-}
-
-function showVersionUpdateBanner(versionInfo) {
-  let banner = document.getElementById("versionBanner");
-  if (!banner) {
-    banner = document.createElement("div");
-    banner.id = "versionBanner";
-    banner.className = "banner-version";
-    banner.innerHTML = `
-      <span>Nova versão do Kaizen Hub disponível (${escapeHtml(versionInfo.version || "atualização")}).</span>
-      <button type="button" class="btn small primary" id="btnReloadVersion">Atualizar agora</button>
-    `;
-    document.body.prepend(banner);
-    document.getElementById("btnReloadVersion")?.addEventListener("click", () => {
-      window.location.reload();
-    });
-  }
-  banner.classList.remove("hidden");
 }
 
 export function escapeHtml(str) {

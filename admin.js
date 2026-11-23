@@ -17,6 +17,7 @@ import {
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showToast, initThemeToggle, escapeHtml } from "./js/ui.js";
+import { initVersionProbe, getLocalIdentity, formatIdentity } from "./js/version.js";
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => document.querySelectorAll(s);
@@ -33,6 +34,7 @@ const PCT = (n) => `${(Number(n) || 0).toFixed(0)}%`;
 
 document.addEventListener("DOMContentLoaded", () => {
   initThemeToggle();
+  initVersionProbe({ moduleUrl: import.meta.url });
   setupTabs();
   setupFilters();
 
@@ -1300,7 +1302,7 @@ function renderConfig() {
   if (selSignup) selSignup.value = appConfig.signupMode || "approval";
   if (selEmail) selEmail.value = String(appConfig.requireEmailVerification !== false);
 
-  $("#infoVersion").textContent = "v2.0.0 (build 20261117-01)";
+  $("#infoVersion").textContent = formatIdentity(getLocalIdentity(import.meta.url));
 }
 
 async function saveConfig() {

@@ -39,9 +39,13 @@ import {
   initBeforeUnloadProtection,
   initConnectionMonitor,
   showConflictModal,
-  initThemeToggle,
-  initVersionProbe
+  initThemeToggle
 } from "./js/ui.js";
+import {
+  initVersionProbe,
+  getLocalIdentity,
+  formatIdentity
+} from "./js/version.js";
 import { openSharingModal } from "./js/share.js";
 
 // ---------- Atalhos de Seleção e Formatação ----------
@@ -80,7 +84,15 @@ const STEP_TITLES = [
 document.addEventListener("DOMContentLoaded", () => {
   initThemeToggle();
   initBeforeUnloadProtection();
-  initVersionProbe();
+  initVersionProbe({
+    moduleUrl: import.meta.url,
+    isDirty: getDirtyFlag,
+    clearDirty: () => setDirtyFlag(false)
+  });
+  const loginVer = $("#loginVersion");
+  if (loginVer) {
+    loginVer.textContent = formatIdentity(getLocalIdentity(import.meta.url));
+  }
   initConnectionMonitor(() => {
     if (activeKaizen && activeKaizen.id) {
       triggerSave();

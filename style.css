@@ -106,6 +106,26 @@ a:hover { text-decoration: underline; }
   align-items: center;
   font-size: 13px;
   font-weight: 600;
+  position: sticky;
+  top: 0;
+  z-index: 110;
+}
+
+.banner-version-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.banner-version .banner-dismiss {
+  background: transparent;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  line-height: 1;
+  font-weight: 700;
 }
 
 /* ---------- Botões ---------- */
