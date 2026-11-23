@@ -38,6 +38,7 @@ function loadXlsx() {
   vm.runInNewContext(code, {
     exports: exportsObj,
     module: moduleObj,
+    Date,
     console,
     setTimeout,
     clearTimeout
@@ -260,4 +261,9 @@ test("buildWorkbook() cria 9 abas válidas com autofilter e cols", () => {
   assert.equal(kaizenData[0].length, 57);
   // Linhas 1 e 2 = kaizens k1 e k2
   assert.equal(kaizenData.length, 3);
+
+  // Célula de data deve ser lida como Date (cellDates: true)
+  const cellData = readWb.Sheets["Kaizens"]["F2"];
+  assert.equal(cellData.t, "d");
+  assert.ok(cellData.v instanceof Date);
 });
