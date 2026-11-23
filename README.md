@@ -4,7 +4,7 @@ Aplicação web moderna para gestão, acompanhamento executivo e execução padr
 
 ---
 
-## 🚀 Novidades da Versão 2.0
+## 🚀 Novidades da Versão 2.0 e 2.3
 
 1. **Modelo de Dados Centralizado v2 (`kaizens/{id}`)**:
    - Cada Kaizen nasce privado do proprietário, com compartilhamento explícito por usuário nos papéis **Visualizar** (`view`) e **Editar** (`edit`).
@@ -14,16 +14,18 @@ Aplicação web moderna para gestão, acompanhamento executivo e execução padr
 2. **Diretório Corporativo Seguro (`directory/{uid}`)**:
    - Permite localizar colegas por e-mail ou nome para compartilhar Kaizens sem expor os perfis sensíveis da coleção `users/`.
 
-3. **Ciclo de Vida e Aprovação de Usuários**:
-   - Cadastros novos nascem no estado `pending` para proteção contra acessos indevidos.
-   - Painel de aprovação integrado no Painel Executivo (`admin.html`) para ativar, bloquear ou promover administradores.
+3. **Ciclo de Vida e Notificação de Novos Cadastros**:
+   - Cadastros novos nascem no estado `pending` com seleção obrigatória de **Área de Negócio**.
+   - Cloud Functions v2 em Node 20 com trigger `onDocumentCreated` em `users/{uid}` e despacho automático de e-mail ao administrador.
+   - Deep link direto no e-mail (`admin.html?tab=users&status=pending`) que abre o painel já na aba de Usuários com filtro em Pendentes.
+   - Ledger de idempotência em `notificacoes/{uid}` com claim atômico e rate limit de 20 envios/hora.
 
 4. **Classificação Financeira Aprimorada**:
    - Suporte nativo ao campo **Tipo de Benefício**: `Hard Saving (HS)` (ganho real) e `Cost Avoidance (CA)` (perda evitada).
    - Cálculo automático de B/C Ratio e indicadores executivos consolidados.
 
-5. **Indexação e Gestão de Links**:
-   - Seção dedicada de links de referência (SharePoint, OneDrive, dashboards) com metadados e tags indexáveis no motor de busca do Hub.
+5. **Exportação Completa em Excel (.xlsx)**:
+   - Backup do banco de dados em 9 abas estruturadas via SheetJS CE 0.20.3 (offline/vendorizado).
 
 6. **Impressão Dedicada A4 / A3 (`print.html`)**:
    - Impressão formatada em A4 Retrato (padrão) com suporte para alternar para A3 Paisagem com um clique.
@@ -34,8 +36,9 @@ Aplicação web moderna para gestão, acompanhamento executivo e execução padr
 8. **Migração Idempotente**:
    - Botão "Migrar meus kaizens" que converte automaticamente projetos legados da subcoleção `users/{uid}/projetos` para a estrutura global v2.
 
-9. **Versionamento e Invalidação de Cache**:
-   - Monitoramento contínuo de `version.json` com probe `no-store` e query string `?v=` nos assets estáticos.
+9. **Versionamento e Invalidação de Cache (Frente A)**:
+   - Fonte única de verdade via `version.json`, gerando metas HTML e cache-busters `?v=`.
+   - Comparadores determinísticos de build (`YYYYMMDD-NN`) e semver, dispensa persistente e atualização segura com `?r=`.
 
 ---
 
@@ -51,14 +54,25 @@ Projetos-de-performance/
 ├── admin.js                # Lógica do painel de administração e relatórios
 ├── admin.css               # Estilos específicos do painel executivo
 ├── firebase-config.js      # Configuração pública do Firebase com memoryLocalCache
+├── firebase.json           # Configuração de deployment do Firebase (Functions)
+├── .firebaserc             # Projeto padrão (projeto-de-performance-bb964)
 ├── version.json            # Metadados de versão e build para probe de atualização
 ├── firestore.rules         # Regras de segurança do Firestore v2
 ├── firestore.indexes.json  # Definição dos índices compostos
 ├── SETUP.md                # Passo a passo para configuração no Firebase Console
+├── functions/              # Cloud Functions v2 (Node 20)
+│   ├── package.json        # Dependências: firebase-admin, firebase-functions, nodemailer
+│   ├── index.js            # Triggers: notifyNewUserRequest e notifyPendingDigest
+│   ├── lib/
+│   │   ├── template.js     # Template puro de e-mail (texto + HTML escapado)
+│   │   ├── recipients.js   # Resolução de destinatários (emailsTo > admins ativos)
+│   │   ├── ledger.js       # Ledger de idempotência e rate limit (notificacoes/{uid})
+│   │   └── mailer.js       # Transporte Nodemailer SMTP, mock file (.eml) e fail
+│   └── test/               # Suíte de testes automatizados com node --test
 ├── js/
 │   ├── firebase-config.js  # Re-exportador da configuração do Firebase
 │   ├── kaizen-model.js     # Modelo de dados, regras de negócio e migração
-│   ├── auth.js             # Ciclo de vida de autenticação e perfis
+│   ├── auth.js             # Ciclo de vida de autenticação, cadastro com área e perfis
 │   ├── db.js               # Camada Firestore v2, transações e debounce
 │   ├── share.js            # Modal de compartilhamento e busca no diretório
 │   ├── ui.js               # Toasts, banner offline, modais e tema
@@ -73,7 +87,8 @@ Projetos-de-performance/
 └── tests/
     ├── kaizen-model.test.js # Testes de modelo, regras e migração
     ├── version.test.js      # Testes de semver, build e probe de versão
-    └── export-rows.test.js  # Testes de normalização e geração do workbook .xlsx
+    ├── export-rows.test.js  # Testes de normalização e geração do workbook .xlsx
+    └── auth-deeplink.test.js # Testes de cadastro com área e deep link admin
 ```
 
 ---
@@ -85,6 +100,76 @@ Projetos-de-performance/
   - SHA-256: `cc015130aa8521e7f088f88898eba949ccdcbfb38df0bd129b44b7273c3a6f41`
   - Utilizada para exportação offline e sob demanda do banco de dados em formato `.xlsx` nativo. Carregada tardiamente apenas quando o administrador solicita o backup.
 - **Chart.js**: versão `4.4.1` (MIT), carregada via CDN no Painel Executivo (`admin.html`).
+- **Nodemailer**: versão `^7.0.0` (MIT), utilizado em ambiente server-side nas Cloud Functions v2 (`functions/lib/mailer.js`) para despacho seguro de e-mails transacionais via SMTP autenticado.
+
+---
+
+## 📬 Notificação de novos pedidos de acesso (Cloud Functions v2)
+
+Quando um novo usuário se cadastra no Kaizen Hub, seu registro nasce com `status: "pending"` e a Cloud Function v2 `notifyNewUserRequest` é acionada em tempo real para notificar a caixa dos administradores com link direto de aprovação.
+
+A notificação possui as seguintes garantias arquiteturais:
+- **Coleção Fechada de Idempotência:** Gravada em `notificacoes/{uid}` via Admin SDK; o documento `users/{uid}` nunca é alterado pela função, preservando a integridade das regras de perfil do usuário.
+- **Claim Transacional:** Impede disparos concorrentes duplicados (reexecuções at-least-once do Cloud Functions).
+- **Rate Limit de Proteção:** Limite de 20 notificações por hora para proteger contra abusos em massa.
+- **Kill Switch Operacional:** Configuração `notificacoes.enabled: false` em `config/app` permite desativar envios instantaneamente sem necessidade de redeploy.
+- **Segredos Isolados:** Senha de app do SMTP gerenciada no Google Secret Manager (`SMTP_PASS`), nunca exposta no código nem em repositório.
+
+### Passos manuais do Groot para deploy (execução única)
+
+Estes passos exigem a conta proprietária do projeto no Firebase / Google Cloud:
+
+1. **Ativar o plano Blaze (pague conforme o uso)**:
+   - Abra: [https://console.firebase.google.com/project/projeto-de-performance-bb964/usage](https://console.firebase.google.com/project/projeto-de-performance-bb964/usage)
+   - Clique em **"Detalhes e faturamento"** → **"Modificar plano"** → selecione **Blaze**.
+   - Cadastre a forma de pagamento. O Spark não suporta Cloud Functions. O volume atual de requisições tem custo estimado em US$ 0,00.
+
+2. **Criar alerta de orçamento (proteção financeira)**:
+   - Abra: [https://console.cloud.google.com/billing](https://console.cloud.google.com/billing) (selecione a conta de faturamento vinculada).
+   - Menu **Orçamentos e alertas** → **Criar orçamento** → escopo "Projeto: `projeto-de-performance-bb964`" → valor **US$ 1** → alertas em 50%, 90% e 100% por e-mail.
+
+3. **Conferir a região do Firestore**:
+   - Abra: [https://console.firebase.google.com/project/projeto-de-performance-bb964/firestore/databases](https://console.firebase.google.com/project/projeto-de-performance-bb964/firestore/databases)
+   - Confirme a **localização** do banco (padrão esperado: `southamerica-east1`). Se for diferente (ex: `nam5`), exporte a variável de ambiente correspondente antes do deploy: `export FUNCTION_REGION=sua-regiao`.
+
+4. **Criar a senha de app do Gmail (dedicada)**:
+   - Abra: [https://myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords) (com verificação em 2 etapas ativa na conta `ghgghgc60@gmail.com`).
+   - Nome do app: **Kaizen Hub Functions** → clique em **Criar** → copie a senha de 16 caracteres gerada.
+
+5. **Instalar e autenticar o Firebase CLI**:
+   - No seu terminal:
+     ```bash
+     npm i -g firebase-tools
+     firebase login
+     cd ~/crew/coder/work/kaizen-web
+     firebase use projeto-de-performance-bb964
+     ```
+
+6. **Gravar o segredo do SMTP no Secret Manager**:
+   - Execute:
+     ```bash
+     firebase functions:secrets:set SMTP_PASS
+     ```
+   - Cole a senha de app de 16 caracteres criada no passo 4.
+
+7. **Publicar as Cloud Functions**:
+   - Execute:
+     ```bash
+     firebase deploy --only functions
+     ```
+   - Na primeira publicação, confirme a ativação das APIs necessárias (Cloud Build, Artifact Registry, Eventarc, Cloud Run, Secret Manager).
+   - Aguarde o término: `Functions deploy complete` informando `notifyNewUserRequest` e `notifyPendingDigest`.
+
+### Teste de Fumaça (Smoke Test)
+
+Após o deploy das funções:
+1. No Kaizen Hub, acesse a aba **Criar conta** e cadastre um e-mail de teste com alias: `ghgghgc60+kaizen-teste1@gmail.com`, informando Nome e selecionando Área de Negócio (ex: **DAF**).
+2. Em até 1 minuto, confira a caixa de entrada de `ghgghgc60@gmail.com`:
+   - Assunto: `[Kaizen Hub] Novo pedido de acesso — <Nome>`
+   - Corpo: Nome, e-mail, área informada e link direto.
+3. No [Firebase Console (Firestore)](https://console.firebase.google.com/project/projeto-de-performance-bb964/firestore/data), confirme a existência do documento `notificacoes/{uid}` com `status: "enviado"`.
+4. Clique no link recebido por e-mail: a aplicação deve abrir em `admin.html`, ativar a aba **Usuários e Aprovações** e filtrar automaticamente por contas com status **Pendentes**.
+5. No painel, **bloqueie** ou rejeite a conta de teste para finalizar o ciclo.
 
 ---
 
@@ -108,22 +193,14 @@ Exclusiva para usuários com papel `admin` ativo:
 
 ## 🧪 Testes Automatizados
 
-O projeto conta com suíte de testes unitários sem dependências externas utilizando o test runner nativo do Node.js:
+O projeto conta com suíte de testes unitários e de integração utilizando o test runner nativo do Node.js:
 
 ```bash
-# Executar a suíte de testes
+# Executar a suíte de testes do cliente (raiz)
 npm test
-# ou diretamente:
-node --test tests/kaizen-model.test.js
 
-# Verificar a sintaxe de todos os módulos JavaScript
-node --check app.js
-node --check admin.js
-node --check js/kaizen-model.js
-node --check js/auth.js
-node --check js/db.js
-node --check js/share.js
-node --check js/ui.js
+# Executar a suíte de testes das Cloud Functions
+cd functions && npm test
 ```
 
 ---
@@ -140,9 +217,3 @@ Acesse:
 - **Kaizen Hub:** `http://localhost:8080/index.html`
 - **Painel Executivo:** `http://localhost:8080/admin.html`
 - **Impressão:** `http://localhost:8080/print.html?id=ID_DO_KAIZEN`
-
----
-
-## 🔒 Configuração e Deploy
-
-Consulte o arquivo **[SETUP.md](SETUP.md)** para instruções detalhadas sobre habilitação de autenticação, publicação de regras de segurança, criação de índices compostos e o procedimento de bootstrap do primeiro administrador.

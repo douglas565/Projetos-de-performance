@@ -1,0 +1,18 @@
+# Dependências
+node_modules/
+functions/node_modules/
+
+# Variáveis de ambiente e segredos locais
+.env
+.env.*
+*.local
+
+# Firebase logs e emulador
+firebase-debug.log
+firebase-debug.*.log
+firestore-debug.log
+ui-debug.log
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
