@@ -131,7 +131,7 @@ export function initAuth(onStateChanged) {
 /**
  * Fluxo de cadastro
  */
-export async function registerUser(email, password, nome) {
+export async function registerUser(email, password, nome, area = "Operação") {
   const strength = validatePasswordStrength(password);
   if (!strength.valid) {
     throw new Error(strength.message);
@@ -149,7 +149,7 @@ export async function registerUser(email, password, nome) {
     uid: cred.user.uid,
     email: cleanEmail,
     nome: cleanNome || cleanEmail.split("@")[0],
-    areaNegocio: "Operação",
+    areaNegocio: (area || "").trim() || "Operação",
     role: "user",
     status: "pending",
     criadoEm: serverTimestamp(),

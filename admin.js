@@ -86,7 +86,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       }
 
-      renderDashboard();
+      applyUrlDeepLink();
       return;
     }
 
@@ -116,7 +116,7 @@ document.addEventListener("DOMContentLoaded", () => {
       setupAdminExport(false);
 
       await Promise.all([loadKaizens(), loadUsers(), loadConfig()]);
-      renderDashboard();
+      applyUrlDeepLink();
     } catch (e) {
       console.error(e);
       showDenied(`Erro ao validar permissões: ${e.message}`);
@@ -136,34 +136,60 @@ function showDenied(msg) {
 }
 
 // ============================================================
-// 1. NAVEGAÇÃO POR ABAS
+// 1. NAVEGAÇÃO POR ABAS E DEEP LINK
 // ============================================================
+function switchAdminTab(target) {
+  const tabBtn = $(`.admin-tab[data-tab="${target}"]`);
+  if (!tabBtn) return false;
+
+  $$(".admin-tab").forEach((t) => {
+    t.classList.remove("active");
+    t.setAttribute("aria-selected", "false");
+  });
+  tabBtn.classList.add("active");
+  tabBtn.setAttribute("aria-selected", "true");
+
+  $$(".tab-content").forEach((c) => c.classList.add("hidden"));
+
+  if (target === "dashboard") {
+    $("#tabDashboard")?.classList.remove("hidden");
+    renderDashboard();
+  } else if (target === "users") {
+    $("#tabUsers")?.classList.remove("hidden");
+    renderUsersTable();
+  } else if (target === "projects") {
+    $("#tabProjects")?.classList.remove("hidden");
+    renderProjectsTable();
+  } else if (target === "config") {
+    $("#tabConfig")?.classList.remove("hidden");
+    renderConfig();
+  }
+  return true;
+}
+
+function applyUrlDeepLink() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const requestedStatus = urlParams.get("status");
+  const requestedTab = urlParams.get("tab");
+
+  if (requestedStatus) {
+    const selStatus = $("#filterUserStatus");
+    if (selStatus) {
+      selStatus.value = requestedStatus;
+    }
+  }
+
+  if (requestedTab && ["dashboard", "users", "projects", "config"].includes(requestedTab)) {
+    switchAdminTab(requestedTab);
+  } else {
+    renderDashboard();
+  }
+}
+
 function setupTabs() {
   $$(".admin-tab").forEach((tab) => {
     tab.onclick = () => {
-      $$(".admin-tab").forEach((t) => {
-        t.classList.remove("active");
-        t.setAttribute("aria-selected", "false");
-      });
-      tab.classList.add("active");
-      tab.setAttribute("aria-selected", "true");
-
-      const target = tab.dataset.tab;
-      $$(".tab-content").forEach((c) => c.classList.add("hidden"));
-
-      if (target === "dashboard") {
-        $("#tabDashboard")?.classList.remove("hidden");
-        renderDashboard();
-      } else if (target === "users") {
-        $("#tabUsers")?.classList.remove("hidden");
-        renderUsersTable();
-      } else if (target === "projects") {
-        $("#tabProjects")?.classList.remove("hidden");
-        renderProjectsTable();
-      } else if (target === "config") {
-        $("#tabConfig")?.classList.remove("hidden");
-        renderConfig();
-      }
+      switchAdminTab(tab.dataset.tab);
     };
   });
 }

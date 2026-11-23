@@ -205,6 +205,7 @@ function setupAuthUI() {
       const isSignup = authMode === "signup";
       $("#btnAuth").textContent = isSignup ? "Criar conta" : "Entrar";
       $("#nameField").classList.toggle("hidden", !isSignup);
+      $("#areaField")?.classList.toggle("hidden", !isSignup);
       $("#confirmPassField").classList.toggle("hidden", !isSignup);
       $("#passHint").classList.toggle("hidden", !isSignup);
       $("#btnReset").classList.toggle("hidden", isSignup);
@@ -232,7 +233,8 @@ function setupAuthUI() {
           return;
         }
         const nome = $("#displayName").value.trim();
-        await registerUser(email, pass, nome);
+        const area = $("#signupArea") ? $("#signupArea").value.trim() : "";
+        await registerUser(email, pass, nome, area);
         showToast("Conta criada! Aguarde aprovação do administrador.", "ok");
       }
       msg.textContent = "";
