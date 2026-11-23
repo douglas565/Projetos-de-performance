@@ -55,6 +55,7 @@ document.addEventListener("DOMContentLoaded", () => {
       $("#userChip").textContent = "Admin Teste";
       $("#viewLoading")?.classList.add("hidden");
       $("#viewAdmin")?.classList.remove("hidden");
+      setupAdminExport(true);
 
       // Popula dados de demonstração para renderizar os 6 gráficos no teste sem Firebase
       allKaizens = [
@@ -112,6 +113,7 @@ document.addEventListener("DOMContentLoaded", () => {
       // Usuário é admin ativo: carrega dados
       $("#viewLoading").classList.add("hidden");
       $("#viewAdmin").classList.remove("hidden");
+      setupAdminExport(false);
 
       await Promise.all([loadKaizens(), loadUsers(), loadConfig()]);
       renderDashboard();
@@ -1353,4 +1355,143 @@ async function checkPublishedVersion() {
   } catch (e) {
     if (msg) msg.textContent = `Falha ao consultar version.json: ${e.message}`;
   }
+}
+
+function setupAdminExport(isMock = false) {
+  if (document.getElementById("btnExportXlsx") || document.getElementById("cardBackupExport")) {
+    return;
+  }
+  const saveCard = $("#btnSaveConfig")?.closest(".card");
+  if (!saveCard) return;
+
+  const card = document.createElement("section");
+  card.className = "card";
+  card.id = "cardBackupExport";
+
+  const h4 = document.createElement("h4");
+  h4.textContent = "Backup completo em Excel";
+  card.appendChild(h4);
+
+  const desc = document.createElement("p");
+  desc.className = "muted";
+  desc.style.marginTop = "6px";
+  desc.style.fontSize = "13px";
+  desc.textContent = "Exporta todos os kaizens, usuários e compartilhamentos em um arquivo .xlsx. Contém dados pessoais — trate como confidencial.";
+  card.appendChild(desc);
+
+  const container = document.createElement("div");
+  container.id = "exportBtnContainer";
+  container.style.marginTop = "14px";
+
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.id = "btnExportXlsx";
+  btn.className = "btn primary";
+  btn.textContent = "📦 Exportar banco completo (.xlsx)";
+  container.appendChild(btn);
+
+  card.appendChild(container);
+  saveCard.insertAdjacentElement("afterend", card);
+  btn.addEventListener("click", async () => {
+    if (currentProfile?.role !== "admin") {
+      showToast("Apenas administradores podem exportar o banco.", "error");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Exportar todos os dados do Kaizen Hub? O arquivo inclui dados pessoais de todos os usuários e deve ser tratado como confidencial."
+    );
+    if (!confirmed) return;
+
+    const container = document.getElementById("exportBtnContainer");
+    btn.remove();
+
+    let cancelled = false;
+    const progressDiv = document.createElement("div");
+    progressDiv.id = "exportProgress";
+    progressDiv.className = "export-progress-box";
+
+    const progRow = document.createElement("div");
+    progRow.style.display = "flex";
+    progRow.style.alignItems = "center";
+    progRow.style.gap = "12px";
+
+    const progBar = document.createElement("progress");
+    progBar.id = "exportProgressBar";
+    progBar.max = 100;
+    progBar.style.flex = "1";
+    progRow.appendChild(progBar);
+
+    const btnCancel = document.createElement("button");
+    btnCancel.type = "button";
+    btnCancel.id = "btnCancelExport";
+    btnCancel.className = "btn small ghost";
+    btnCancel.textContent = "Cancelar";
+    progRow.appendChild(btnCancel);
+
+    progressDiv.appendChild(progRow);
+
+    const progText = document.createElement("p");
+    progText.id = "exportProgressText";
+    progText.className = "muted";
+    progText.style.marginTop = "6px";
+    progText.style.fontSize = "12px";
+    progText.textContent = "Iniciando exportação…";
+    progressDiv.appendChild(progText);
+
+    container.appendChild(progressDiv);
+
+    btnCancel.onclick = () => {
+      cancelled = true;
+      progText.textContent = "Cancelando…";
+    };
+
+    try {
+      const { exportDatabaseToXlsx } = await import("./js/export-xlsx.js");
+      const result = await exportDatabaseToXlsx({
+        db,
+        exportedBy: {
+          uid: currentUser?.uid || "mock-admin",
+          nome: currentProfile?.nome || currentUser?.displayName || "",
+          email: currentProfile?.email || currentUser?.email || "",
+          role: currentProfile?.role || "admin"
+        },
+        identity: getLocalIdentity(import.meta.url),
+        onProgress: ({ phase, current, total, message }) => {
+          const pBar = document.getElementById("exportProgressBar");
+          const pText = document.getElementById("exportProgressText");
+          if (pText && message) pText.textContent = message;
+          if (pBar) {
+            if (total != null && total > 0) {
+              pBar.max = total;
+              pBar.value = current;
+            } else {
+              pBar.removeAttribute("value");
+            }
+          }
+        },
+        isCancelled: () => cancelled,
+        mockData: isMock ? { kaizens: allKaizens, users: allUsers, configDocs: { app: appConfig }, directory: allUsers } : null
+      });
+
+      progressDiv.remove();
+      container.appendChild(btn);
+
+      if (result.ok) {
+        showToast(
+          `Backup exportado: ${result.counts.kaizens} kaizens, ${result.counts.usuarios} usuários, ${result.counts.acoes} ações.`,
+          "success"
+        );
+      } else if (result.reason === "cancelled") {
+        showToast("Exportação cancelada. Nenhum arquivo foi gerado.", "info");
+      } else {
+        const msg = result.error?.message || "erro desconhecido";
+        showToast(`Não foi possível exportar: ${msg}. Nenhum arquivo foi gerado.`, "error");
+      }
+    } catch (err) {
+      progressDiv.remove();
+      container.appendChild(btn);
+      showToast(`Não foi possível exportar: ${err.message}. Nenhum arquivo foi gerado.`, "error");
+    }
+  });
 }

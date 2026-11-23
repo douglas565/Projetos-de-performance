@@ -61,10 +61,48 @@ Projetos-de-performance/
 │   ├── auth.js             # Ciclo de vida de autenticação e perfis
 │   ├── db.js               # Camada Firestore v2, transações e debounce
 │   ├── share.js            # Modal de compartilhamento e busca no diretório
-│   └── ui.js               # Toasts, banner offline, modais e tema
+│   ├── ui.js               # Toasts, banner offline, modais e tema
+│   ├── version.js          # Identidade local, comparadores e probe de versão
+│   ├── export-rows.js      # Estrutura tabular pura para exportação de planilhas
+│   ├── export-xlsx.js      # Orquestrador paginado de exportação para Excel
+│   └── vendor/
+│       └── xlsx.full.min.js # SheetJS CE 0.20.3 (Apache-2.0, offline/vendorizado)
+├── scripts/
+│   ├── release.mjs         # Sincronização e verificação de versão e build
+│   └── wait-pages.mjs      # Polling do version.json no GitHub Pages
 └── tests/
-    └── kaizen-model.test.js # Testes unitários nativos (node --test)
+    ├── kaizen-model.test.js # Testes de modelo, regras e migração
+    ├── version.test.js      # Testes de semver, build e probe de versão
+    └── export-rows.test.js  # Testes de normalização e geração do workbook .xlsx
 ```
+
+---
+
+## 📦 Dependências de Terceiros
+
+- **SheetJS Community Edition (xlsx.full.min.js)**: versão `0.20.3`, licenciada sob **Apache-2.0**.
+  - Localização: `js/vendor/xlsx.full.min.js`
+  - SHA-256: `cc015130aa8521e7f088f88898eba949ccdcbfb38df0bd129b44b7273c3a6f41`
+  - Utilizada para exportação offline e sob demanda do banco de dados em formato `.xlsx` nativo. Carregada tardiamente apenas quando o administrador solicita o backup.
+- **Chart.js**: versão `4.4.1` (MIT), carregada via CDN no Painel Executivo (`admin.html`).
+
+---
+
+## 📊 Exportação Completa do Banco (.xlsx)
+
+Exclusiva para usuários com papel `admin` ativo:
+- Disponível na aba **Configurações** do Painel Executivo (`admin.html`).
+- Gera arquivo `kaizen-hub-backup-AAAAMMDD-HHmm.xlsx` contendo 9 abas estruturadas:
+  1. **Resumo**: Metadados da exportação, totais e auditoria.
+  2. **Kaizens**: Todos os kaizens com 57 colunas normalizadas.
+  3. **Usuários**: Cadastro completo com papel, status e data.
+  4. **Compartilhamentos**: Relação desnormalizada e deduplicada kaizen ↔ pessoa.
+  5. **Ações**: Plano de ação detalhado com status e prazos.
+  6. **Riscos**: Matriz de severidade, probabilidade e scores calculados.
+  7. **Links**: Repositório de referências e tags.
+  8. **Configurações**: Parâmetros do sistema (`config/app` e `config/lookups`).
+  9. **Diretório**: Base corporativa de contatos.
+- O botão existente no dashboard segue ativo como **Exportar CSV (filtro atual)**.
 
 ---
 
