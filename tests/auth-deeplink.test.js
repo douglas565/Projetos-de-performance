@@ -12,6 +12,7 @@ describe("Frente C (Client-side): Cadastro com Área e Deep Link no Admin", () =
     assert.ok(html.includes("<option>DAF</option>"), "Deve conter opção DAF");
     assert.ok(html.includes("<option>EO</option>"), "Deve conter opção EO");
     assert.ok(html.includes("<option>TI / Digital</option>"), "Deve conter opção TI / Digital");
+    assert.equal(html.split("<option>Suprimentos</option>").length - 1, 2, "Suprimentos deve aparecer exatamente nos dois selects de área");
   });
 
   test("C8: app.js exibe #areaField no signup e envia área para registerUser", () => {
