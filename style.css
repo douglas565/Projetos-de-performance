@@ -309,6 +309,7 @@ a:hover { text-decoration: underline; }
 .status-saving { color: var(--warn); }
 .status-dirty { color: var(--warn); }
 .status-unsynced { color: var(--danger); font-weight: 700; }
+.status-error { color: var(--danger); font-weight: 700; background: rgba(224, 65, 65, 0.12); }
 .status-conflict { color: var(--danger); font-weight: 700; background: rgba(224, 65, 65, 0.1); }
 
 /* ---------- Login / Autenticação ---------- */

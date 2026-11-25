@@ -39,6 +39,7 @@ export function setSaveStatus(state, extra = "") {
   if (!el) return;
 
   el.className = `save-status status-${state}`;
+  el.title = "";
 
   switch (state) {
     case "saved": {
@@ -57,8 +58,17 @@ export function setSaveStatus(state, extra = "") {
       hasUnsavedChanges = true;
       break;
     case "unsynced": {
-      const count = extra ? ` (${extra})` : "";
-      el.textContent = `Não sincronizado — sem conexão${count}`;
+      const count = extra ? String(extra) : "1";
+      el.textContent = `Tentando novamente (${count}/6)`;
+      hasUnsavedChanges = true;
+      break;
+    }
+    case "error": {
+      const message = String(extra || "Erro ao salvar.");
+      const reason = message.split(/[.!?]/, 1)[0].trim();
+      const shortReason = reason.length > 60 ? `${reason.slice(0, 57)}…` : reason;
+      el.textContent = `Não salvo — ${shortReason}`;
+      el.title = message;
       hasUnsavedChanges = true;
       break;
     }

@@ -63,6 +63,7 @@ let unsubHub = null;
 let authMode = "signin";
 let currentWizardStep = 0;
 let editorMode = "wizard";
+let lastSaveErrorToastMessage = null;
 
 const STEP_TITLES = [
   "Etapa 0 · Identificação do Projeto",
@@ -1195,6 +1196,12 @@ function triggerSave() {
       setSaveStatus(status, extra);
       if (status === "saved") {
         setDirtyFlag(false);
+      } else if (status === "error") {
+        const message = String(extra || "Erro ao salvar.");
+        if (message !== lastSaveErrorToastMessage) {
+          lastSaveErrorToastMessage = message;
+          showToast(message, "danger");
+        }
       }
     },
     onConflict: (serverData) => {

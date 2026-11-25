@@ -22,6 +22,11 @@ import {
   generateSearchKeywords,
   migrateLegacyProject
 } from "./kaizen-model.js";
+import {
+  classifySaveError,
+  retryDelayMs,
+  MAX_SAVE_ATTEMPTS
+} from "./save-errors.js";
 
 // Fila de gravação em memória por Kaizen
 const saveQueue = new Map();
@@ -151,7 +156,7 @@ export async function saveKaizenWithTransaction(kaizenId, kaizenData, user) {
       const updatePayload = {
         ...kaizenData,
         rev: nextRev,
-        schemaVersion: 2,
+        schemaVersion: Number(server.schemaVersion) || 2,
         searchKeywords: keywords,
         atualizadoEm: serverTimestamp(),
         atualizadoPor: user.uid,
@@ -189,15 +194,25 @@ export async function saveKaizenWithTransaction(kaizenId, kaizenData, user) {
 /**
  * Fila de salvamento com debounce e tentativas em memória (coalescência por kaizenId)
  */
-export function enqueueSave({ kaizenId, getData, user, onStatusChange, onConflict, onSaved }) {
-  if (retryTimers.has(kaizenId)) {
-    clearTimeout(retryTimers.get(kaizenId));
-    retryTimers.delete(kaizenId);
+function clearSaveTimers(kaizenId) {
+  for (const timers of [saveQueue, retryTimers]) {
+    if (timers.has(kaizenId)) {
+      clearTimeout(timers.get(kaizenId));
+      timers.delete(kaizenId);
+    }
   }
+}
 
+function clearTimerIfCurrent(timers, kaizenId, timer) {
+  if (timers.get(kaizenId) === timer) timers.delete(kaizenId);
+}
+
+export function enqueueSave({ kaizenId, getData, user, onStatusChange, onConflict, onSaved }) {
+  clearSaveTimers(kaizenId);
   onStatusChange("dirty");
 
   const timer = setTimeout(async () => {
+    clearTimerIfCurrent(saveQueue, kaizenId, timer);
     onStatusChange("saving");
     const data = getData();
     try {
@@ -211,8 +226,12 @@ export function enqueueSave({ kaizenId, getData, user, onStatusChange, onConflic
         if (onConflict) onConflict(err.serverData);
       } else {
         console.error("Falha ao salvar no Firestore:", err);
+        const classified = classifySaveError(err);
+        if (classified.permanent) {
+          onStatusChange("error", classified.message);
+          return;
+        }
         onStatusChange("unsynced", "1");
-        // Agenda retry automático em memória se houver conexão
         scheduleRetry({ kaizenId, getData, user, onStatusChange, onConflict, onSaved, attempt: 1 });
       }
     }
@@ -222,14 +241,18 @@ export function enqueueSave({ kaizenId, getData, user, onStatusChange, onConflic
 }
 
 function scheduleRetry({ kaizenId, getData, user, onStatusChange, onConflict, onSaved, attempt }) {
-  const delays = [2000, 5000, 15000, 30000, 60000];
-  const delay = delays[Math.min(attempt - 1, delays.length - 1)];
+  clearSaveTimers(kaizenId);
+  const delay = retryDelayMs(attempt);
 
   const t = setTimeout(async () => {
-    if (!navigator.onLine) {
-      // Se estiver offline, aguarda evento 'online'
+    clearTimerIfCurrent(retryTimers, kaizenId, t);
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      // Mantém o estado pendente e aguarda a reconexão sem consumir tentativa.
+      onStatusChange("unsynced", String(attempt));
+      scheduleRetry({ kaizenId, getData, user, onStatusChange, onConflict, onSaved, attempt });
       return;
     }
+
     onStatusChange("saving");
     const data = getData();
     try {
@@ -242,8 +265,21 @@ function scheduleRetry({ kaizenId, getData, user, onStatusChange, onConflict, on
         onStatusChange("conflict");
         if (onConflict) onConflict(err.serverData);
       } else {
-        onStatusChange("unsynced", String(attempt + 1));
-        scheduleRetry({ kaizenId, getData, user, onStatusChange, onConflict, onSaved, attempt: attempt + 1 });
+        console.error("Falha ao repetir salvamento no Firestore:", err);
+        const classified = classifySaveError(err);
+        if (classified.permanent) {
+          onStatusChange("error", classified.message);
+          return;
+        }
+
+        const failedAttempts = attempt + 1;
+        if (failedAttempts >= MAX_SAVE_ATTEMPTS) {
+          onStatusChange("error", "Não foi possível salvar após 6 tentativas. Verifique sua conexão e tente novamente.");
+          return;
+        }
+
+        onStatusChange("unsynced", String(failedAttempts));
+        scheduleRetry({ kaizenId, getData, user, onStatusChange, onConflict, onSaved, attempt: failedAttempts });
       }
     }
   }, delay);
