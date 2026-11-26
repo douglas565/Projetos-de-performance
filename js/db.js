@@ -20,7 +20,8 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {
   generateSearchKeywords,
-  migrateLegacyProject
+  migrateLegacyProject,
+  normalizeKaizenSharing
 } from "./kaizen-model.js";
 import {
   classifySaveError,
@@ -43,6 +44,7 @@ export function subscribeToHubKaizens(user, userProfile, onUpdate, onError) {
   if (!user) return () => {};
 
   const isAdmin = userProfile && userProfile.role === "admin";
+  const isActiveUser = userProfile?.status === "active";
   const kaizensRef = collection(db, "kaizens");
 
   if (isAdmin) {
@@ -62,9 +64,22 @@ export function subscribeToHubKaizens(user, userProfile, onUpdate, onError) {
     );
   }
 
+  if (!isActiveUser) {
+    queueMicrotask(() => onError?.({ code: "permission-denied", message: "Seu cadastro ainda não está ativo; você não tem acesso aos projetos." }));
+    return () => {};
+  }
+
   // Dois listeners mesclados no cliente
   const mineMap = new Map();
   const sharedMap = new Map();
+
+
+  function handleListenerError(key, err) {
+    console.error(`Erro no listener ${key}:`, err);
+    if (listenerErrors.has(key)) return;
+    listenerErrors.add(key);
+    if (onError) onError(err);
+  }
 
   function notifyCombined() {
     const combined = new Map();
@@ -92,10 +107,7 @@ export function subscribeToHubKaizens(user, userProfile, onUpdate, onError) {
       snapshot.docs.forEach((d) => mineMap.set(d.id, { id: d.id, ...d.data() }));
       notifyCombined();
     },
-    (err) => {
-      console.warn("Aviso na consulta de meus kaizens:", err);
-      if (onError) onError(err);
-    }
+    (err) => handleListenerError("meus kaizens", err)
   );
 
   const unsubShared = onSnapshot(
@@ -105,10 +117,7 @@ export function subscribeToHubKaizens(user, userProfile, onUpdate, onError) {
       snapshot.docs.forEach((d) => sharedMap.set(d.id, { id: d.id, ...d.data() }));
       notifyCombined();
     },
-    (err) => {
-      console.warn("Aviso na consulta de compartilhados:", err);
-      if (onError) onError(err);
-    }
+    (err) => handleListenerError("kaizens compartilhados", err)
   );
 
   return () => {
@@ -293,10 +302,15 @@ function scheduleRetry({ kaizenId, getData, user, onStatusChange, onConflict, on
 export async function softDeleteKaizen(kaizenId, user) {
   if (!user || !user.uid) throw new Error("Usuário não autenticado.");
   const docRef = doc(db, "kaizens", kaizenId);
-  await updateDoc(docRef, {
-    arquivado: true,
-    atualizadoEm: serverTimestamp(),
-    atualizadoPor: user.uid
+  await runTransaction(db, async (transaction) => {
+    const snap = await transaction.get(docRef);
+    if (!snap.exists()) throw new Error("Kaizen não encontrado.");
+    transaction.update(docRef, {
+      arquivado: true,
+      rev: (Number(snap.data().rev) || 1) + 1,
+      atualizadoEm: serverTimestamp(),
+      atualizadoPor: user.uid
+    });
   });
 }
 
@@ -306,10 +320,15 @@ export async function softDeleteKaizen(kaizenId, user) {
 export async function restoreKaizen(kaizenId, user) {
   if (!user || !user.uid) throw new Error("Usuário não autenticado.");
   const docRef = doc(db, "kaizens", kaizenId);
-  await updateDoc(docRef, {
-    arquivado: false,
-    atualizadoEm: serverTimestamp(),
-    atualizadoPor: user.uid
+  await runTransaction(db, async (transaction) => {
+    const snap = await transaction.get(docRef);
+    if (!snap.exists()) throw new Error("Kaizen não encontrado.");
+    transaction.update(docRef, {
+      arquivado: false,
+      rev: (Number(snap.data().rev) || 1) + 1,
+      atualizadoEm: serverTimestamp(),
+      atualizadoPor: user.uid
+    });
   });
 }
 

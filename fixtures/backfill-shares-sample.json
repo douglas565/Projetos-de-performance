@@ -1,0 +1,75 @@
+{
+  "_comment": "FIXTURE SINTÉTICA — nomes/e-mails fictícios, sem qualquer dado de produção. Usada para validar scripts/backfill-shares.mjs --dry-run.",
+  "documents": [
+    {
+      "id": "KZ-SYNTH-0001",
+      "data": {
+        "ownerUid": "owner-synth",
+        "shares": [{ "uid": "u0", "email": "u0@example.com", "nome": "u0", "role": "view" }],
+        "sharedWithUids": ["ext-123"],
+        "viewersUids": ["ext-123"],
+        "editorsUids": ["ext-123"]
+      }
+    },
+    {
+      "id": "KZ-SYNTH-0002",
+      "data": {
+        "ownerUid": "owner-synth",
+        "shares": [{ "uid": "u1", "email": "u1@example.com", "nome": "u1", "role": "edit" }],
+        "sharedWithUids": ["ext-123"],
+        "viewersUids": ["ext-123"],
+        "editorsUids": ["ext-123"]
+      }
+    },
+    {
+      "id": "KZ-SYNTH-0003",
+      "data": {
+        "ownerUid": "owner-synth",
+        "shares": [{ "uid": "u2", "email": "u2@example.com", "nome": "u2", "role": "view" }],
+        "sharedWithUids": [],
+        "viewersUids": ["u2"],
+        "editorsUids": []
+      }
+    },
+    {
+      "id": "KZ-SYNTH-0004",
+      "data": {
+        "ownerUid": "owner-synth",
+        "shares": [{ "uid": "u3", "email": "u3@example.com", "nome": "u3", "role": "edit" }],
+        "sharedWithUids": ["u3"],
+        "viewersUids": ["u3"],
+        "editorsUids": ["ext-999"]
+      }
+    },
+    {
+      "id": "KZ-SYNTH-0005",
+      "data": {
+        "ownerUid": "owner-synth",
+        "shares": [{ "uid": "u4", "email": "u4@example.com", "nome": "u4", "role": "view" }],
+        "sharedWithUids": ["u4", "u4-extra"],
+        "viewersUids": ["u4", "u4-extra"],
+        "editorsUids": []
+      }
+    },
+    {
+      "id": "KZ-SYNTH-0006",
+      "data": {
+        "ownerUid": "owner-synth",
+        "shares": [{ "uid": "u5", "email": "u5@example.com", "nome": "u5", "role": "edit" }],
+        "sharedWithUids": ["u5"],
+        "viewersUids": [],
+        "editorsUids": ["u5"]
+      }
+    },
+    {
+      "id": "KZ-SYNTH-0007",
+      "data": {
+        "ownerUid": "owner-synth",
+        "shares": [],
+        "sharedWithUids": [],
+        "viewersUids": [],
+        "editorsUids": []
+      }
+    }
+  ]
+}

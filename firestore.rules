@@ -34,8 +34,18 @@ service cloud.firestore {
     // ---------- diretório de usuários para compartilhamento ----------
     // Permite que usuários ativos busquem colegas por e-mail/nome sem expor a coleção users/
     match /directory/{userId} {
-      allow read:  if isActive();
-      allow create, update: if signedIn() && uid() == userId && request.resource.data.uid == userId;
+      allow read: if isActive();
+      allow create: if signedIn() && uid() == userId
+        && request.resource.data.uid == userId
+        && exists(/databases/$(database)/documents/users/$(userId))
+        && request.resource.data.status == get(/databases/$(database)/documents/users/$(userId)).data.status;
+      allow update: if (isAdmin()
+          && request.resource.data.uid == userId
+          && request.resource.data.status in ['active', 'pending', 'blocked'])
+        || (signedIn() && uid() == userId
+          && request.resource.data.uid == userId
+          && exists(/databases/$(database)/documents/users/$(userId))
+          && request.resource.data.status == get(/databases/$(database)/documents/users/$(userId)).data.status);
       allow delete: if isAdmin();
     }
 
@@ -109,8 +119,12 @@ service cloud.firestore {
         );
       }
 
-      allow get:  if canRead();
-      allow list: if isAdmin() || canRead();
+      allow get: if canRead();
+      // Firestore evaluates query constraints against candidate documents. Keep each
+      // membership predicate paired with the exact query field; never grant a generic list.
+      allow list: if isAdmin()
+        || (isActive() && k().ownerUid == uid())
+        || (isActive() && ('sharedWithUids' in k()) && uid() in k().sharedWithUids);
 
       allow create: if isActive() && verified()
         && nk().ownerUid == uid()
@@ -125,7 +139,7 @@ service cloud.firestore {
         && nk().atualizadoEm != null
         && (isOwnerOrAdmin() || sameSharing());
 
-      allow delete: if isAdmin();
+      allow delete: if isOwnerOrAdmin();
     }
 
     // ---------- histórico de auditoria (opcional append-only) ----------

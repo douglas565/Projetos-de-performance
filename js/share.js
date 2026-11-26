@@ -7,34 +7,49 @@ import {
   collection,
   getDocs,
   query,
+  where,
   limit
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { syncSharingLists } from "./kaizen-model.js";
-import { showToast, escapeHtml } from "./ui.js";
+import {
+  syncSharingLists,
+  normalizeKaizenSharing,
+  getDirectoryShareStatus,
+  prepareKaizenSharingSave,
+  isBareEmail,
+  directoryLookupMessage
+} from "./kaizen-model.js";
+import { showToast } from "./ui.js";
 
 /**
- * Busca usuários no diretório público (directory/) por e-mail ou nome
+ * Busca usuários ativos no diretório público (directory/) por e-mail ou nome
  */
 export async function searchDirectoryUsers(term) {
   const cleanTerm = (term || "").trim().toLowerCase();
   if (!cleanTerm || cleanTerm.length < 2) return [];
 
+  const dirRef = collection(db, "directory");
+  const results = [];
+
+  if (isBareEmail(cleanTerm)) {
+    try {
+      const exactMatches = await getDocs(query(dirRef, where("email", "==", cleanTerm), limit(50)));
+      const users = exactMatches.docs
+        .map((item) => ({ id: item.id, ...item.data() }))
+        .filter((item) => getDirectoryShareStatus(item) === "active");
+      results.push(...users.map((user) => ({ uid: user.uid, email: user.email || "", nome: user.nome || user.email || "" })));
+    } catch (err) {
+      console.error("Erro ao buscar usuário por e-mail no diretório:", err);
+    }
+    return results;
+  }
+
   try {
-    const dirRef = collection(db, "directory");
     const snap = await getDocs(query(dirRef, limit(50)));
-    const results = [];
-
     for (const d of snap.docs) {
-      const u = d.data();
-      const email = (u.email || "").toLowerCase();
-      const nome = (u.nome || "").toLowerCase();
-
-      if (email.includes(cleanTerm) || nome.includes(cleanTerm)) {
-        results.push({
-          uid: d.id,
-          email: u.email || "",
-          nome: u.nome || u.email || ""
-        });
+      const user = { id: d.id, ...d.data() };
+      if (getDirectoryShareStatus(user) !== "active") continue;
+      if ((user.nome || "").toLowerCase().includes(cleanTerm)) {
+        results.push({ uid: user.uid, email: user.email || "", nome: user.nome || user.email || "" });
       }
     }
     return results;
@@ -42,6 +57,36 @@ export async function searchDirectoryUsers(term) {
     console.error("Erro ao buscar usuários no diretório:", err);
     return [];
   }
+}
+
+/**
+ * Consulta exata por e-mail e classifica o resultado:
+ * { status: "active" | "inactive" | "legacy" | "missing" | "invalid", user }
+ */
+export async function lookupDirectoryRecipient(term) {
+  const email = (term || "").trim().toLowerCase();
+  if (!isBareEmail(email)) return { status: "invalid", user: null };
+  const snap = await getDocs(query(collection(db, "directory"), where("email", "==", email), limit(5)));
+  const docs = snap.docs.map((item) => ({ id: item.id, ...item.data() }));
+  if (docs.length === 0) return { status: "missing", user: null };
+
+  const active = docs.find((item) => getDirectoryShareStatus(item) === "active");
+  if (active) {
+    return {
+      status: "active",
+      user: { uid: active.uid, email: active.email || email, nome: active.nome || email.split("@")[0] }
+    };
+  }
+  if (docs.some((item) => getDirectoryShareStatus(item) === "legacy")) return { status: "legacy", user: null };
+  return { status: "inactive", user: null };
+}
+
+/**
+ * Compat: devolve o usuário apenas quando ele pode receber acesso
+ */
+export async function resolveDirectoryUserByEmail(term) {
+  const lookup = await lookupDirectoryRecipient(term);
+  return lookup.status === "active" ? lookup.user : null;
 }
 
 /**
@@ -75,6 +120,7 @@ export function openSharingModal({ kaizen, currentUser, onSaveShares }) {
             </div>
           </label>
           <div id="shareSearchResults" class="admin-list hidden" style="max-height:140px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;padding:4px;margin-top:4px"></div>
+          <div id="shareSearchFeedback" class="muted" role="status" style="font-size:12px;min-height:16px;margin-top:4px"></div>
         </div>
 
         <h5 style="margin:14px 0 8px;font-size:13px;text-transform:uppercase;color:var(--muted)">Pessoas com acesso</h5>
@@ -90,13 +136,14 @@ export function openSharingModal({ kaizen, currentUser, onSaveShares }) {
   }
 
   // Clona shares locais para manipulação
-  let localShares = Array.isArray(kaizen.shares) ? [...kaizen.shares] : [];
+  let localShares = normalizeKaizenSharing(kaizen).shares;
   let selectedUserToAdd = null;
 
   const searchInput = modal.querySelector("#shareUserSearch");
   const roleSelect = modal.querySelector("#shareNewRole");
   const btnAdd = modal.querySelector("#btnAddShareUser");
   const resultsBox = modal.querySelector("#shareSearchResults");
+  const feedback = modal.querySelector("#shareSearchFeedback");
   const shareListBox = modal.querySelector("#shareList");
   const btnClose = modal.querySelector("#btnCloseShare");
   const btnCancel = modal.querySelector("#btnCancelShare");
@@ -203,6 +250,8 @@ export function openSharingModal({ kaizen, currentUser, onSaveShares }) {
     selectedUserToAdd = null;
     clearTimeout(searchTimer);
     const term = searchInput.value.trim();
+    const exactEmailQuery = isBareEmail(term);
+    if (feedback) { feedback.textContent = ""; feedback.style.color = ""; }
     if (term.length < 2) {
       resultsBox.classList.add("hidden");
       resultsBox.innerHTML = "";
@@ -211,11 +260,25 @@ export function openSharingModal({ kaizen, currentUser, onSaveShares }) {
 
     searchTimer = setTimeout(async () => {
       const found = await searchDirectoryUsers(term);
-      const filtered = found.filter((u) => u.uid !== kaizen.ownerUid && !localShares.some((s) => s.uid === u.uid));
+      const filtered = found
+        .map((user) => {
+          return syncSharingLists([user]).shares[0] || null;
+        })
+        .filter((user) => user && user.uid !== kaizen.ownerUid && user.uid !== currentUser?.uid && !localShares.some((share) => share.uid === user.uid));
       resultsBox.innerHTML = "";
 
       if (filtered.length === 0) {
         resultsBox.innerHTML = '<div style="padding:6px;font-size:12px;color:var(--muted)">Nenhum usuário encontrado</div>';
+        if (exactEmailQuery && feedback) {
+          try {
+            const lookup = await lookupDirectoryRecipient(term);
+            feedback.textContent = directoryLookupMessage(lookup.status, term);
+            if (lookup.status !== "active") feedback.style.color = "var(--danger, #c0392b)";
+          } catch (err) {
+            console.error("Erro ao consultar o diretório:", err);
+            feedback.textContent = "Não foi possível consultar o diretório agora. Tente novamente.";
+          }
+        }
       } else {
         filtered.forEach((u) => {
           const item = document.createElement("div");
@@ -241,29 +304,43 @@ export function openSharingModal({ kaizen, currentUser, onSaveShares }) {
     }, 250);
   };
 
-  btnAdd.onclick = () => {
-    if (!selectedUserToAdd && searchInput.value.includes("@")) {
-      // Permite adicionar por e-mail manual se encontrar ou formato válido
-      const email = searchInput.value.trim().toLowerCase();
-      selectedUserToAdd = { uid: `ext-${Date.now()}`, email, nome: email.split("@")[0] };
-    }
-
-    if (!selectedUserToAdd) {
-      showToast("Selecione um usuário da lista para adicionar.", "warn");
-      return;
-    }
-
-    localShares.push({
-      uid: selectedUserToAdd.uid,
-      email: selectedUserToAdd.email,
-      nome: selectedUserToAdd.nome,
-      role: roleSelect.value
-    });
-
+  const addShareLocally = (user) => {
+    localShares = prepareKaizenSharingSave([
+      ...localShares.filter((share) => share?.uid !== user.uid),
+      { uid: user.uid, email: user.email, nome: user.nome, role: roleSelect.value }
+    ]).shares;
     searchInput.value = "";
     selectedUserToAdd = null;
     resultsBox.classList.add("hidden");
+    if (feedback) feedback.textContent = "";
     renderShareList();
+  };
+
+  btnAdd.onclick = async () => {
+    if (selectedUserToAdd?.uid && !String(selectedUserToAdd.uid).startsWith("ext-")) {
+      addShareLocally(selectedUserToAdd);
+      return;
+    }
+
+    const typed = (searchInput.value || "").trim().toLowerCase();
+    if (!isBareEmail(typed)) {
+      showToast("Escolha um usuário na lista ou digite o e-mail completo do colega.", "warn");
+      return;
+    }
+
+    try {
+      const lookup = await lookupDirectoryRecipient(typed);
+      if (lookup.status !== "active" || !lookup.user) {
+        const message = directoryLookupMessage(lookup.status, typed);
+        if (feedback) { feedback.textContent = message; feedback.style.color = "var(--danger, #c0392b)"; }
+        showToast(message, "danger");
+        return;
+      }
+      addShareLocally(lookup.user);
+    } catch (err) {
+      console.error("Falha ao consultar o diretório:", err);
+      showToast("Não foi possível consultar o diretório agora. Verifique sua conexão e tente novamente.", "danger");
+    }
   };
 
   const close = () => {
@@ -273,13 +350,35 @@ export function openSharingModal({ kaizen, currentUser, onSaveShares }) {
   btnClose.onclick = close;
   btnCancel.onclick = close;
 
-  btnConfirm.onclick = () => {
-    const synced = syncSharingLists(localShares);
-    close();
-    if (typeof onSaveShares === "function") {
-      onSaveShares(synced);
+  btnConfirm.onclick = async () => {
+    const typed = (searchInput.value || "").trim().toLowerCase();
+    const pendingInvite = isBareEmail(typed) ? typed : "";
+
+    try {
+      let sharesToSave = localShares;
+      if (pendingInvite) {
+        const lookup = await lookupDirectoryRecipient(pendingInvite);
+        if (lookup.status !== "active" || !lookup.user) {
+          const message = directoryLookupMessage(lookup.status, pendingInvite);
+          if (feedback) { feedback.textContent = message; feedback.style.color = "var(--danger, #c0392b)"; }
+          showToast(message, "danger");
+          return;
+        }
+        sharesToSave = [
+          ...localShares.filter((share) => share?.uid !== lookup.user.uid),
+          { ...lookup.user, role: roleSelect.value }
+        ];
+      }
+
+      const synced = prepareKaizenSharingSave(sharesToSave);
+      localShares = synced.shares;
+      if (typeof onSaveShares === "function") onSaveShares(synced);
+      close();
+      showToast("Permissões de compartilhamento atualizadas.", "ok");
+    } catch (err) {
+      console.error("Falha ao validar destinatário do compartilhamento:", err);
+      showToast("Não foi possível validar esse usuário. Verifique sua conexão e tente novamente.", "danger");
     }
-    showToast("Permissões de compartilhamento atualizadas.", "ok");
   };
 
   renderShareList();

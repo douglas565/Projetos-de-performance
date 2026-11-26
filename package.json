@@ -4,6 +4,14 @@
   "description": "Kaizen Hub v2 — Gestão de projetos de melhoria contínua",
   "type": "module",
   "scripts": {
-    "test": "node --test tests/*.test.js"
+    "test": "node --test tests/*.test.js",
+    "test:rules": "firebase emulators:exec --only firestore,auth \"node --test tests/rules.test.mjs tests/rules-directory.test.mjs tests/rules-restore.test.mjs\"",
+    "test:rules:node": "node --test tests/rules.test.mjs"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^4.0.1",
+    "firebase": "^11.10.0",
+    "firebase-admin": "^13.10.0",
+    "firebase-tools": "^13.35.1"
   }
 }

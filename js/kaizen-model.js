@@ -143,20 +143,86 @@ export function generateSearchKeywords(kaizen) {
 /**
  * Sincroniza listas de UIDs de compartilhamento a partir da lista `shares`
  */
+export function normalizeKaizenSharing(kaizen) {
+  const normalized = syncSharingLists(kaizen?.shares);
+  return { ...kaizen, ...normalized };
+}
+
+export function needsShareBackfill(kaizen) {
+  const uids = [
+    ...(Array.isArray(kaizen?.shares) ? kaizen.shares.map((share) => share?.uid) : []),
+    ...(Array.isArray(kaizen?.sharedWithUids) ? kaizen.sharedWithUids : []),
+    ...(Array.isArray(kaizen?.viewersUids) ? kaizen.viewersUids : []),
+    ...(Array.isArray(kaizen?.editorsUids) ? kaizen.editorsUids : [])
+  ];
+  if (uids.some((uid) => typeof uid === "string" && uid.startsWith("ext-"))) return true;
+  const normalized = syncSharingLists(kaizen?.shares);
+  return ["sharedWithUids", "viewersUids", "editorsUids"].some((field) =>
+    JSON.stringify(Array.isArray(kaizen?.[field]) ? kaizen[field] : []) !== JSON.stringify(normalized[field])
+  );
+}
+
+export function reconcileKaizenShares(kaizen) {
+  return { ...kaizen, ...syncSharingLists(kaizen?.shares) };
+}
+
+export function prepareKaizenSharingSave(shares) {
+  return syncSharingLists(shares);
+}
+
+export function getDirectoryShareStatus(user) {
+  if (!user || typeof user !== "object" || !user.id || user.uid !== user.id) return "invalid";
+  if (user.status === "active") return "active";
+  if (!Object.prototype.hasOwnProperty.call(user, "status")) return "legacy";
+  return "inactive";
+}
+
+/**
+ * Um e-mail colado no campo de busca (sem nome do autocomplete, sem espaços)
+ */
+export function isBareEmail(value) {
+  if (typeof value !== "string") return false;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim().toLowerCase());
+}
+
+/**
+ * Mensagem de UI para o resultado da consulta ao directory/ (nunca culpa o usuário)
+ */
+export function directoryLookupMessage(status, email) {
+  const target = (email || "").trim();
+  switch (status) {
+    case "active":
+      return "Esse colega já está na lista de acesso ou é você/dono do Kaizen.";
+    case "inactive":
+      return `${target} está cadastrado, mas a conta não está ativa. Peça ao administrador para ativar o acesso.`;
+    case "legacy":
+      return `${target} tem cadastro antigo sem status definido. Peça ao administrador para atualizar o cadastro no painel antes de compartilhar.`;
+    case "invalid":
+      return "Informe um e-mail completo, por exemplo nome@empresa.com.";
+    default:
+      return `Não existe usuário com o e-mail ${target}. Peça ao colega para criar a conta antes de compartilhar.`;
+  }
+}
+
 export function syncSharingLists(shares) {
-  const safeShares = Array.isArray(shares) ? shares : [];
+  const usersByUid = new Map();
+  for (const share of Array.isArray(shares) ? shares : []) {
+    const uid = typeof share?.uid === "string" ? share.uid.trim() : "";
+    if (!uid || uid.startsWith("ext-")) continue;
+    usersByUid.set(uid, {
+      ...share,
+      uid,
+      role: share.role === "edit" ? "edit" : "view"
+    });
+  }
+  const safeShares = Array.from(usersByUid.values());
   const viewersUids = [];
   const editorsUids = [];
 
-  for (const s of safeShares) {
-    if (!s || !s.uid) continue;
-    if (s.role === "edit") {
-      if (!editorsUids.includes(s.uid)) editorsUids.push(s.uid);
-    } else {
-      if (!viewersUids.includes(s.uid)) viewersUids.push(s.uid);
-    }
+  for (const share of safeShares) {
+    if (share.role === "edit") editorsUids.push(share.uid);
+    else viewersUids.push(share.uid);
   }
-
   const sharedWithUids = Array.from(new Set([...viewersUids, ...editorsUids]));
   return { viewersUids, editorsUids, sharedWithUids, shares: safeShares };
 }

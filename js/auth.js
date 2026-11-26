@@ -100,6 +100,7 @@ export async function getOrCreateUserProfile(firebaseUser) {
       uid: firebaseUser.uid,
       email,
       nome,
+      status: profile.status || "pending",
       atualizadoEm: serverTimestamp()
     }, { merge: true });
   } catch (e) {
@@ -167,6 +168,7 @@ export async function registerUser(email, password, nome, area = "Operação") {
       uid: cred.user.uid,
       email: cleanEmail,
       nome: cleanNome || cleanEmail.split("@")[0],
+      status: initialProfile.status,
       atualizadoEm: serverTimestamp()
     });
   } catch (e) {}

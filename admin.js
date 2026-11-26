@@ -18,6 +18,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { showToast, initThemeToggle, escapeHtml } from "./js/ui.js";
 import { initVersionProbe, getLocalIdentity, formatIdentity } from "./js/version.js";
+import { restoreKaizen } from "./js/db.js";
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => document.querySelectorAll(s);
@@ -1144,11 +1145,19 @@ function formatUserStatus(st) {
 
 async function updateUserStatus(uid, newStatus) {
   try {
+    const target = allUsers.find((u) => u.uid === uid);
     await updateDoc(doc(db, "users", uid), {
       status: newStatus,
       atualizadoEm: serverTimestamp()
     });
-    const target = allUsers.find((u) => u.uid === uid);
+    const directoryEntry = {
+      uid,
+      status: newStatus,
+      atualizadoEm: serverTimestamp()
+    };
+    if (target?.email) directoryEntry.email = String(target.email).toLowerCase();
+    if (target?.nome) directoryEntry.nome = target.nome;
+    await setDoc(doc(db, "directory", uid), directoryEntry, { merge: true });
     if (target) target.status = newStatus;
     renderUsersTable();
     showToast(`Status do usuário atualizado para "${formatUserStatus(newStatus)}".`, "ok");
@@ -1284,10 +1293,21 @@ function renderProjectsTable() {
       btnRestore.className = "btn small primary";
       btnRestore.textContent = "Restaurar";
       btnRestore.onclick = async () => {
-        await updateDoc(doc(db, "kaizens", k.id), { arquivado: false, atualizadoEm: serverTimestamp() });
-        k.arquivado = false;
-        renderProjectsTable();
-        showToast("Projeto restaurado.", "ok");
+        btnRestore.disabled = true;
+        try {
+          // Mesmo caminho transacional do hub: grava rev + 1 e atualizadoPor,
+          // exigidos pela rule de update (nk().rev == k().rev + 1).
+          await restoreKaizen(k.id, currentUser);
+          k.arquivado = false;
+          k.rev = (Number(k.rev) || 1) + 1;
+          renderProjectsTable();
+          showToast("Projeto restaurado.", "ok");
+        } catch (err) {
+          console.error("Falha ao restaurar Kaizen:", err);
+          showToast("Não foi possível restaurar o projeto. Tente novamente.", "error");
+        } finally {
+          btnRestore.disabled = false;
+        }
       };
       wrap.appendChild(btnRestore);
     } else {

@@ -1,0 +1,205 @@
+⚠  emulators: You are not currently authenticated so some features may not work correctly. Please run firebase login to authenticate the CLI.
+i  emulators: Starting emulators: auth, firestore
+i  firestore: Firestore Emulator logging to firestore-debug.log
+✔  firestore: Firestore Emulator UI websocket is running on 9150.
+i  Running script: node --test tests/rules.test.mjs
+TAP version 13
+# Subtest: owner can get
+ok 1 - owner can get
+  ---
+  duration_ms: 3536.59827
+  type: 'test'
+  ...
+# Subtest: owner can list
+ok 2 - owner can list
+  ---
+  duration_ms: 281.493817
+  type: 'test'
+  ...
+# Subtest: owner can update
+ok 3 - owner can update
+  ---
+  duration_ms: 179.149075
+  type: 'test'
+  ...
+# Subtest: owner can delete
+ok 4 - owner can delete
+  ---
+  duration_ms: 123.075976
+  type: 'test'
+  ...
+# Subtest: viewer can get
+ok 5 - viewer can get
+  ---
+  duration_ms: 92.039243
+  type: 'test'
+  ...
+# Subtest: viewer can list by membership
+ok 6 - viewer can list by membership
+  ---
+  duration_ms: 96.003903
+  type: 'test'
+  ...
+# Subtest: editor can update content
+ok 7 - editor can update content
+  ---
+  duration_ms: 164.64092
+  type: 'test'
+  ...
+# [2026-11-26T18:11:57.655Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x42726acd error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# evaluation error at L135:24 for 'update' @ L135, false for 'update' @ L163, false for 'update' @ L135, false for 'update' @ L163
+# Subtest: editor cannot change shares
+ok 8 - editor cannot change shares
+  ---
+  duration_ms: 151.186762
+  type: 'test'
+  ...
+# Subtest: non-member get denied
+ok 9 - non-member get denied
+  ---
+  duration_ms: 77.345212
+  type: 'test'
+  ...
+# Subtest: non-member filtered list returns zero
+ok 10 - non-member filtered list returns zero
+  ---
+  duration_ms: 54.261371
+  type: 'test'
+  ...
+# Subtest: admin can list all
+ok 11 - admin can list all
+  ---
+  duration_ms: 75.658728
+  type: 'test'
+  ...
+# Subtest: admin can get
+ok 12 - admin can get
+  ---
+  duration_ms: 56.486241
+  type: 'test'
+  ...
+# Subtest: admin can delete
+ok 13 - admin can delete
+  ---
+  duration_ms: 86.889324
+  type: 'test'
+  ...
+# Subtest: anonymous denied
+ok 14 - anonymous denied
+  ---
+  duration_ms: 37.973123
+  type: 'test'
+  ...
+# Subtest: pending user denied
+ok 15 - pending user denied
+  ---
+  duration_ms: 42.017757
+  type: 'test'
+  ...
+# [2026-11-26T18:11:58.168Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x42726ad6 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L129, false for 'create' @ L163, evaluation error at L135:24 for 'update' @ L135, false for 'update' @ L163, false for 'create' @ L129, false for 'create' @ L163
+# Subtest: cannot create with another owner uid
+ok 16 - cannot create with another owner uid
+  ---
+  duration_ms: 77.399886
+  type: 'test'
+  ...
+# [2026-11-26T18:11:58.253Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x42726ad7 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L129, false for 'create' @ L163, evaluation error at L135:24 for 'update' @ L135, false for 'update' @ L163, false for 'create' @ L129, false for 'create' @ L163
+# Subtest: cannot create with wrong schemaVersion
+ok 17 - cannot create with wrong schemaVersion
+  ---
+  duration_ms: 84.826776
+  type: 'test'
+  ...
+# [2026-11-26T18:11:58.327Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x42726ad8 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L129, false for 'create' @ L163, evaluation error at L135:24 for 'update' @ L135, false for 'update' @ L163, false for 'create' @ L129, false for 'create' @ L163
+# Subtest: cannot create with wrong initial rev
+ok 18 - cannot create with wrong initial rev
+  ---
+  duration_ms: 73.969762
+  type: 'test'
+  ...
+# [2026-11-26T18:11:58.429Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x42726ada error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# evaluation error at L135:24 for 'update' @ L135, false for 'update' @ L163, false for 'update' @ L135, false for 'update' @ L163
+# Subtest: cannot update with wrong schemaVersion
+ok 19 - cannot update with wrong schemaVersion
+  ---
+  duration_ms: 101.290952
+  type: 'test'
+  ...
+# [2026-11-26T18:11:58.534Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x42726adc error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# evaluation error at L135:24 for 'update' @ L135, false for 'update' @ L163, false for 'update' @ L135, false for 'update' @ L163
+# Subtest: cannot update without incrementing rev
+ok 20 - cannot update without incrementing rev
+  ---
+  duration_ms: 104.910104
+  type: 'test'
+  ...
+# [2026-11-26T18:11:58.640Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x42726ade error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# evaluation error at L135:24 for 'update' @ L135, false for 'update' @ L163, false for 'update' @ L135, false for 'update' @ L163
+# Subtest: cannot change owner uid
+ok 21 - cannot change owner uid
+  ---
+  duration_ms: 105.849736
+  type: 'test'
+  ...
+# Subtest: owner can update a field while retaining sharing
+ok 22 - owner can update a field while retaining sharing
+  ---
+  duration_ms: 141.37062
+  type: 'test'
+  ...
+# [2026-11-26T18:11:58.907Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x42726ae2 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# evaluation error at L135:24 for 'update' @ L135, false for 'update' @ L163, false for 'update' @ L135, false for 'update' @ L163
+# Subtest: editor cannot alter shares list
+ok 23 - editor cannot alter shares list
+  ---
+  duration_ms: 124.2912
+  type: 'test'
+  ...
+# [2026-11-26T18:11:59.004Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x42726ae4 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# evaluation error at L135:24 for 'update' @ L135, false for 'update' @ L163, false for 'update' @ L135, false for 'update' @ L163
+# Subtest: editor cannot alter viewer list
+ok 24 - editor cannot alter viewer list
+  ---
+  duration_ms: 97.840443
+  type: 'test'
+  ...
+# [2026-11-26T18:11:59.141Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x42726ae6 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# evaluation error at L135:24 for 'update' @ L135, false for 'update' @ L163, false for 'update' @ L135, false for 'update' @ L163
+# Subtest: editor cannot alter editor list
+ok 25 - editor cannot alter editor list
+  ---
+  duration_ms: 136.148891
+  type: 'test'
+  ...
+# Subtest: non-member broad list denied
+ok 26 - non-member broad list denied
+  ---
+  duration_ms: 63.561606
+  type: 'test'
+  ...
+# [2026-11-26T18:11:59.316Z]  @firebase/firestore: Firestore (11.10.0): GrpcConnection RPC 'Write' stream 0x42726ae9 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# evaluation error at L135:24 for 'update' @ L135, false for 'update' @ L163, false for 'update' @ L135, false for 'update' @ L163
+# Subtest: viewer update denied
+ok 27 - viewer update denied
+  ---
+  duration_ms: 110.697634
+  type: 'test'
+  ...
+1..27
+# tests 27
+# suites 0
+# pass 27
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 6681.032226
+✔  Script exited successfully (code 0)
+i  emulators: Shutting down emulators.
+i  firestore: Stopping Firestore Emulator
+i  auth: Stopping Authentication Emulator
+i  hub: Stopping emulator hub
+i  logging: Stopping Logging Emulator

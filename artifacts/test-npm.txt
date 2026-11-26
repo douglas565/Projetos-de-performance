@@ -1,0 +1,349 @@
+
+> kaizen-hub@2.3.1 test
+> node --test tests/*.test.js
+
+TAP version 13
+# Subtest: Restaurar Kaizen no painel admin (admin.js)
+    # Subtest: admin.js reutiliza restoreKaizen (caminho transacional único)
+    ok 1 - admin.js reutiliza restoreKaizen (caminho transacional único)
+      ---
+      duration_ms: 2.111969
+      type: 'test'
+      ...
+    # Subtest: botão Restaurar não faz mais update parcial sem rev
+    ok 2 - botão Restaurar não faz mais update parcial sem rev
+      ---
+      duration_ms: 0.489977
+      type: 'test'
+      ...
+    # Subtest: restoreKaizen grava rev + 1 e atualizadoPor na transação
+    ok 3 - restoreKaizen grava rev + 1 e atualizadoPor na transação
+      ---
+      duration_ms: 0.691562
+      type: 'test'
+      ...
+    1..3
+ok 1 - Restaurar Kaizen no painel admin (admin.js)
+  ---
+  duration_ms: 6.23848
+  type: 'suite'
+  ...
+# Subtest: Frente C (Client-side): Cadastro com Área e Deep Link no Admin
+    # Subtest: C8: index.html possui campo Área de negócio (\#areaField, \#signupArea) com as opções padrão
+    ok 1 - C8: index.html possui campo Área de negócio (\#areaField, \#signupArea) com as opções padrão
+      ---
+      duration_ms: 3.041009
+      type: 'test'
+      ...
+    # Subtest: C8: app.js exibe \#areaField no signup e envia área para registerUser
+    ok 2 - C8: app.js exibe \#areaField no signup e envia área para registerUser
+      ---
+      duration_ms: 0.673761
+      type: 'test'
+      ...
+    # Subtest: C8: js/auth.js grava areaNegocio informada ou faz fallback para 'Operação'
+    ok 3 - C8: js/auth.js grava areaNegocio informada ou faz fallback para 'Operação'
+      ---
+      duration_ms: 0.469152
+      type: 'test'
+      ...
+    # Subtest: C9: admin.js interpreta ?tab= e ?status= aplicando deep link para usuários pendentes
+    ok 4 - C9: admin.js interpreta ?tab= e ?status= aplicando deep link para usuários pendentes
+      ---
+      duration_ms: 0.599848
+      type: 'test'
+      ...
+    1..4
+ok 2 - Frente C (Client-side): Cadastro com Área e Deep Link no Admin
+  ---
+  duration_ms: 6.741328
+  type: 'suite'
+  ...
+# Subtest: Status do cadastro propagado para directory/
+    # Subtest: js/auth.js grava status no directory/ ao criar e ao atualizar o perfil
+    ok 1 - js/auth.js grava status no directory/ ao criar e ao atualizar o perfil
+      ---
+      duration_ms: 2.115924
+      type: 'test'
+      ...
+    # Subtest: admin.js propaga aprovação/bloqueio para o directory
+    ok 2 - admin.js propaga aprovação/bloqueio para o directory
+      ---
+      duration_ms: 0.482639
+      type: 'test'
+      ...
+    # Subtest: rules permitem admin atualizar directory e barram autoelevação
+    ok 3 - rules permitem admin atualizar directory e barram autoelevação
+      ---
+      duration_ms: 0.67075
+      type: 'test'
+      ...
+    1..3
+ok 3 - Status do cadastro propagado para directory/
+  ---
+  duration_ms: 6.238128
+  type: 'suite'
+  ...
+# Subtest: Aba Kaizens possui exatamente 57 colunas na ordem normatizada da spec §2.4.2
+ok 4 - Aba Kaizens possui exatamente 57 colunas na ordem normatizada da spec §2.4.2
+  ---
+  duration_ms: 1.492675
+  type: 'test'
+  ...
+# Subtest: Normalizadores tratam tipos, nulos, datas e injeção de fórmulas
+ok 5 - Normalizadores tratam tipos, nulos, datas e injeção de fórmulas
+  ---
+  duration_ms: 0.691037
+  type: 'test'
+  ...
+# Subtest: normalizeKaizenRow() mapeia campos, nulos e fallbacks
+ok 6 - normalizeKaizenRow() mapeia campos, nulos e fallbacks
+  ---
+  duration_ms: 0.588221
+  type: 'test'
+  ...
+# Subtest: Deduplicação de compartilhamentos funciona conforme §2.4.4
+ok 7 - Deduplicação de compartilhamentos funciona conforme §2.4.4
+  ---
+  duration_ms: 13.607576
+  type: 'test'
+  ...
+# Subtest: buildWorkbook() cria 9 abas válidas com autofilter e cols
+ok 8 - buildWorkbook() cria 9 abas válidas com autofilter e cols
+  ---
+  duration_ms: 89.855676
+  type: 'test'
+  ...
+# Subtest: generateKaizenCode() gera código no formato KZ-YYYYMMDD-XXXX
+ok 9 - generateKaizenCode() gera código no formato KZ-YYYYMMDD-XXXX
+  ---
+  duration_ms: 3.597695
+  type: 'test'
+  ...
+# Subtest: normalizeString() remove acentos e converte para minúsculo
+ok 10 - normalizeString() remove acentos e converte para minúsculo
+  ---
+  duration_ms: 0.954641
+  type: 'test'
+  ...
+# Subtest: extractTokens() extrai apenas palavras únicas com >= 3 caracteres
+ok 11 - extractTokens() extrai apenas palavras únicas com >= 3 caracteres
+  ---
+  duration_ms: 0.901169
+  type: 'test'
+  ...
+# Subtest: calculateBcRatio() calcula proporção benefício / custo
+ok 12 - calculateBcRatio() calcula proporção benefício / custo
+  ---
+  duration_ms: 0.472813
+  type: 'test'
+  ...
+# Subtest: calculatePercentualFromActions() calcula percentual baseado em ações concluídas
+ok 13 - calculatePercentualFromActions() calcula percentual baseado em ações concluídas
+  ---
+  duration_ms: 0.756728
+  type: 'test'
+  ...
+# Subtest: calculateRiskScore() calcula score 1..16 e níveis baixo, médio e alto
+ok 14 - calculateRiskScore() calcula score 1..16 e níveis baixo, médio e alto
+  ---
+  duration_ms: 0.562293
+  type: 'test'
+  ...
+# Subtest: syncSharingLists() rejeita UIDs sintéticos ext-* e entradas inválidas
+ok 15 - syncSharingLists() rejeita UIDs sintéticos ext-* e entradas inválidas
+  ---
+  duration_ms: 2.341824
+  type: 'test'
+  ...
+# Subtest: syncSharingLists() é idempotente e não mantém listas pré-calculadas
+ok 16 - syncSharingLists() é idempotente e não mantém listas pré-calculadas
+  ---
+  duration_ms: 0.81252
+  type: 'test'
+  ...
+# Subtest: getDirectoryShareStatus() diferencia ativos, inativos e documentos legados
+ok 17 - getDirectoryShareStatus() diferencia ativos, inativos e documentos legados
+  ---
+  duration_ms: 1.048108
+  type: 'test'
+  ...
+# Subtest: prepareKaizenSharingSave() preserva remoções e papéis sem e-mail pendente
+ok 18 - prepareKaizenSharingSave() preserva remoções e papéis sem e-mail pendente
+  ---
+  duration_ms: 1.406913
+  type: 'test'
+  ...
+# Subtest: isBareEmail() aceita somente e-mail completo sem espaços
+ok 19 - isBareEmail() aceita somente e-mail completo sem espaços
+  ---
+  duration_ms: 0.741072
+  type: 'test'
+  ...
+# Subtest: directoryLookupMessage() explica cada estado sem culpar o usuário
+ok 20 - directoryLookupMessage() explica cada estado sem culpar o usuário
+  ---
+  duration_ms: 0.483994
+  type: 'test'
+  ...
+# Subtest: createDefaultKaizen() inicializa schema v2 com rev=1 e valores padrão
+ok 21 - createDefaultKaizen() inicializa schema v2 com rev=1 e valores padrão
+  ---
+  duration_ms: 1.06735
+  type: 'test'
+  ...
+# Subtest: validateKaizen() validação para rascunho e para conclusão
+ok 22 - validateKaizen() validação para rascunho e para conclusão
+  ---
+  duration_ms: 0.817174
+  type: 'test'
+  ...
+# Subtest: canUserRead() e canUserEdit() respeitam papéis de owner, edit, view e admin
+ok 23 - canUserRead() e canUserEdit() respeitam papéis de owner, edit, view e admin
+  ---
+  duration_ms: 0.651611
+  type: 'test'
+  ...
+# Subtest: F1: visibilidade 'compartilhado' NUNCA libera leitura para terceiros (apenas view/edit explícito)
+ok 24 - F1: visibilidade 'compartilhado' NUNCA libera leitura para terceiros (apenas view/edit explícito)
+  ---
+  duration_ms: 0.349895
+  type: 'test'
+  ...
+# Subtest: generateSearchKeywords() indexa campos do kaizen e links
+ok 25 - generateSearchKeywords() indexa campos do kaizen e links
+  ---
+  duration_ms: 1.046019
+  type: 'test'
+  ...
+# Subtest: migrateLegacyProject() transforma dados legados do V6/v1 para v2
+ok 26 - migrateLegacyProject() transforma dados legados do V6/v1 para v2
+  ---
+  duration_ms: 2.321767
+  type: 'test'
+  ...
+# Subtest: validateWizardStep() valida requisitos específicos de cada etapa do wizard
+ok 27 - validateWizardStep() valida requisitos específicos de cada etapa do wizard
+  ---
+  duration_ms: 0.954613
+  type: 'test'
+  ...
+# Subtest: classifySaveError identifica permission-denied como permanente
+ok 28 - classifySaveError identifica permission-denied como permanente
+  ---
+  duration_ms: 4.12722
+  type: 'test'
+  ...
+# Subtest: classifySaveError identifica unauthenticated como permanente
+ok 29 - classifySaveError identifica unauthenticated como permanente
+  ---
+  duration_ms: 0.754492
+  type: 'test'
+  ...
+# Subtest: classifySaveError identifica unavailable como transitório
+ok 30 - classifySaveError identifica unavailable como transitório
+  ---
+  duration_ms: 0.495455
+  type: 'test'
+  ...
+# Subtest: erros desconhecidos são transitórios e têm mensagem de fallback
+ok 31 - erros desconhecidos são transitórios e têm mensagem de fallback
+  ---
+  duration_ms: 2.510053
+  type: 'test'
+  ...
+# Subtest: retryDelayMs segue a sequência configurada e limita tentativas excedentes
+ok 32 - retryDelayMs segue a sequência configurada e limita tentativas excedentes
+  ---
+  duration_ms: 1.07141
+  type: 'test'
+  ...
+# Subtest: retryDelayMs adiciona jitter entre 0 e 500 ms
+ok 33 - retryDelayMs adiciona jitter entre 0 e 500 ms
+  ---
+  duration_ms: 0.649797
+  type: 'test'
+  ...
+# Subtest: MAX_SAVE_ATTEMPTS limita salvamentos a seis tentativas
+ok 34 - MAX_SAVE_ATTEMPTS limita salvamentos a seis tentativas
+  ---
+  duration_ms: 0.655039
+  type: 'test'
+  ...
+# Subtest: Fluxo de compartilhamento (js/share.js)
+    # Subtest: nunca gera UID sintético ext-<timestamp>
+    ok 1 - nunca gera UID sintético ext-<timestamp>
+      ---
+      duration_ms: 2.136019
+      type: 'test'
+      ...
+    # Subtest: resolução do destinatário classifica o estado do diretório
+    ok 2 - resolução do destinatário classifica o estado do diretório
+      ---
+      duration_ms: 0.461133
+      type: 'test'
+      ...
+    # Subtest: confirmar salvamento não exige e-mail pendente
+    ok 3 - confirmar salvamento não exige e-mail pendente
+      ---
+      duration_ms: 0.566115
+      type: 'test'
+      ...
+    # Subtest: persistência passa sempre pelo normalizador único
+    ok 4 - persistência passa sempre pelo normalizador único
+      ---
+      duration_ms: 0.376239
+      type: 'test'
+      ...
+    # Subtest: adicionar por e-mail digitado valida o diretório antes de gravar
+    ok 5 - adicionar por e-mail digitado valida o diretório antes de gravar
+      ---
+      duration_ms: 0.412652
+      type: 'test'
+      ...
+    1..5
+ok 35 - Fluxo de compartilhamento (js/share.js)
+  ---
+  duration_ms: 8.250256
+  type: 'suite'
+  ...
+# [version] Versão diverge com mesmo build: 2.1.0 2.2.0
+# Subtest: parseBuildTag() extrai corretamente a tag de build
+ok 36 - parseBuildTag() extrai corretamente a tag de build
+  ---
+  duration_ms: 1.899919
+  type: 'test'
+  ...
+# Subtest: compareBuilds() compara monotonicamente builds no formato YYYYMMDD-NN
+ok 37 - compareBuilds() compara monotonicamente builds no formato YYYYMMDD-NN
+  ---
+  duration_ms: 0.437118
+  type: 'test'
+  ...
+# Subtest: compareVersions() cumpre a tabela normativa da §1.3.4 da spec
+ok 38 - compareVersions() cumpre a tabela normativa da §1.3.4 da spec
+  ---
+  duration_ms: 0.739995
+  type: 'test'
+  ...
+# Subtest: shouldPromptUpdate() decide se deve alertar segundo a spec §1.3.4
+ok 39 - shouldPromptUpdate() decide se deve alertar segundo a spec §1.3.4
+  ---
+  duration_ms: 1.943534
+  type: 'test'
+  ...
+# Subtest: formatIdentity() formata a identificação local
+ok 40 - formatIdentity() formata a identificação local
+  ---
+  duration_ms: 0.400547
+  type: 'test'
+  ...
+1..40
+# tests 51
+# suites 4
+# pass 51
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 737.86396

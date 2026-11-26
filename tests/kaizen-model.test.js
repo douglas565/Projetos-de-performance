@@ -14,6 +14,13 @@ import {
   calculateRiskScore,
   generateSearchKeywords,
   syncSharingLists,
+  normalizeKaizenSharing,
+  needsShareBackfill,
+  reconcileKaizenShares,
+  getDirectoryShareStatus,
+  prepareKaizenSharingSave,
+  isBareEmail,
+  directoryLookupMessage,
   createDefaultKaizen,
   validateKaizen,
   validateWizardStep,
@@ -82,16 +89,68 @@ test("calculateRiskScore() calcula score 1..16 e níveis baixo, médio e alto", 
   assert.equal(rAlto.nivel, "alto");
 });
 
-test("syncSharingLists() separa visualizadores e editores e unifica sharedWithUids", () => {
-  const shares = [
-    { uid: "u1", email: "a@empresa.com", nome: "Alice", role: "view" },
-    { uid: "u2", email: "b@empresa.com", nome: "Bob", role: "edit" },
-    { uid: "u3", email: "c@empresa.com", nome: "Carol", role: "view" }
+test("syncSharingLists() rejeita UIDs sintéticos ext-* e entradas inválidas", () => {
+  const res = syncSharingLists([
+    { uid: "ext-1732628192345", email: "legacy@example.com", role: "view" },
+    { uid: "u-real", email: "real@example.com", role: "edit" },
+    { uid: "", email: "empty@example.com", role: "view" },
+    null
+  ]);
+
+  assert.deepEqual(res.shares.map((share) => share.uid), ["u-real"]);
+  assert.deepEqual(res.viewersUids, []);
+  assert.deepEqual(res.editorsUids, ["u-real"]);
+  assert.deepEqual(res.sharedWithUids, ["u-real"]);
+});
+
+test("syncSharingLists() é idempotente e não mantém listas pré-calculadas", () => {
+  const first = syncSharingLists([
+    { uid: "u-view", role: "view" },
+    { uid: "u-edit", role: "edit" },
+    { uid: "u-view", role: "edit" }
+  ]);
+  const second = syncSharingLists(first.shares);
+
+  assert.deepEqual(second, first);
+  assert.deepEqual(first.viewersUids, []);
+  assert.deepEqual(first.editorsUids, ["u-view", "u-edit"]);
+  assert.deepEqual(first.sharedWithUids, ["u-view", "u-edit"]);
+});
+
+test("getDirectoryShareStatus() diferencia ativos, inativos e documentos legados", () => {
+  assert.equal(getDirectoryShareStatus({ id: "u1", uid: "u1", status: "active" }), "active");
+  assert.equal(getDirectoryShareStatus({ id: "u2", uid: "u2", status: "pending" }), "inactive");
+  assert.equal(getDirectoryShareStatus({ id: "u3", uid: "u3" }), "legacy");
+  assert.equal(getDirectoryShareStatus({ id: "u4", uid: "other", status: "active" }), "invalid");
+});
+
+test("prepareKaizenSharingSave() preserva remoções e papéis sem e-mail pendente", () => {
+  const existing = [
+    { uid: "u-view", email: "view@example.com", role: "edit" },
+    { uid: "u-removed", email: "removed@example.com", role: "view" }
   ];
-  const res = syncSharingLists(shares);
-  assert.deepEqual(res.viewersUids, ["u1", "u3"]);
-  assert.deepEqual(res.editorsUids, ["u2"]);
-  assert.deepEqual(res.sharedWithUids.sort(), ["u1", "u2", "u3"]);
+  const result = prepareKaizenSharingSave(existing.filter((share) => share.uid !== "u-removed"));
+  assert.deepEqual(result.shares.map(({ uid, role }) => [uid, role]), [["u-view", "edit"]]);
+  assert.deepEqual(result.sharedWithUids, ["u-view"]);
+  assert.deepEqual(result.editorsUids, ["u-view"]);
+  assert.deepEqual(result.viewersUids, []);
+});
+
+test("isBareEmail() aceita somente e-mail completo sem espaços", () => {
+  assert.equal(isBareEmail("colega@empresa.com"), true);
+  assert.equal(isBareEmail("  Colega@Empresa.COM  "), true);
+  assert.equal(isBareEmail("Colega (colega@empresa.com)"), false);
+  assert.equal(isBareEmail("colega"), false);
+  assert.equal(isBareEmail(""), false);
+  assert.equal(isBareEmail(null), false);
+});
+
+test("directoryLookupMessage() explica cada estado sem culpar o usuário", () => {
+  assert.match(directoryLookupMessage("missing", "x@empresa.com"), /Não existe usuário com o e-mail x@empresa\.com/);
+  assert.match(directoryLookupMessage("inactive", "x@empresa.com"), /não está ativa/);
+  assert.match(directoryLookupMessage("legacy", "x@empresa.com"), /cadastro antigo sem status definido/);
+  assert.match(directoryLookupMessage("invalid", "x"), /e-mail completo/);
+  assert.match(directoryLookupMessage("active", "x@empresa.com"), /já está na lista de acesso/);
 });
 
 test("createDefaultKaizen() inicializa schema v2 com rev=1 e valores padrão", () => {
