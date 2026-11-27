@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="app-version" content="2.4.1">
-  <meta name="app-build" content="20261127-02">
+  <meta name="app-version" content="2.5.0">
+  <meta name="app-build" content="20261127-03">
   <meta name="description" content="Kaizen Hub v2 — Gestão e execução de projetos de melhoria contínua (Standard Kaizen SOL-FR-0013).">
   <meta name="theme-color" content="#0A66FF">
   <title>Kaizen Hub · Gestão de Projetos</title>
-  <link rel="stylesheet" href="style.css?v=20261127-02">
+  <link rel="stylesheet" href="style.css?v=20261127-03">
 </head>
 <body>
 
@@ -41,7 +41,7 @@
     <span id="saveStatus" class="save-status" role="status" aria-live="polite"></span>
     <span id="userChip" class="chip"></span>
     <button type="button" id="btnMigrate" class="btn ghost small" title="Importar projetos da versão anterior">Migrar meus kaizens</button>
-    <a href="admin.html?v=20261127-02" id="linkAdmin" class="btn ghost small hidden">Painel executivo</a>
+    <a href="admin.html?v=20261127-03" id="linkAdmin" class="btn ghost small hidden">Painel executivo</a>
     <button type="button" id="btnLogout" class="btn ghost small">Sair</button>
   </div>
 </header>
@@ -479,9 +479,12 @@
       <section class="card">
         <h4>8. Resultados (Business Case)</h4>
         <p class="hint">Ganhos financeiros mensurados, investimento realizado e relação Benefício / Custo.</p>
-        <div class="grid-4">
-          <label>Benefício anual (R$)
-            <input type="number" step="0.01" min="0" data-f="beneficio" placeholder="0,00">
+        <div class="grid-5">
+          <label>Benefício Previsto (R$)
+            <input type="number" step="0.01" min="0" data-f="beneficioPrevisto" placeholder="0,00">
+          </label>
+          <label>Benefício Realizado (R$)
+            <input type="number" step="0.01" min="0" data-f="beneficioRealizado" placeholder="Não informado">
           </label>
           <label>Custo de implementação (R$)
             <input type="number" step="0.01" min="0" data-f="custo" placeholder="0,00">
@@ -652,7 +655,7 @@
 <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
 <!-- SCRIPTS EM MÓDULOS ES NATIVOS -->
-<script type="module" src="app.js?v=20261127-02"></script>
+<script type="module" src="app.js?v=20261127-03"></script>
 
 </body>
 </html>

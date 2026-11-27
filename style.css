@@ -526,14 +526,19 @@ fieldset {
 .cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 .cols3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
 .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0 16px; }
+.grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0 16px; }
 .span2 { grid-column: span 2; }
 
+@media (max-width: 1280px) {
+  .grid-5 { grid-template-columns: repeat(3, 1fr); }
+}
 @media (max-width: 1120px) {
   .cols3 { grid-template-columns: 1fr; }
   .grid-4 { grid-template-columns: 1fr 1fr; }
+  .grid-5 { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 768px) {
-  .cols2, .cols3, .grid-4 { grid-template-columns: 1fr; }
+  .cols2, .cols3, .grid-4, .grid-5 { grid-template-columns: 1fr; }
   .span2 { grid-column: auto; }
 }
 

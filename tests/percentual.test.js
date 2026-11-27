@@ -140,6 +140,50 @@ test("business case: benefício 0 não completa o BC", () => {
   assert.equal(calcularPercentualDetalhado(k).etapas.businessCase, 0);
 });
 
+test("business case v2.5: previsto 0 reprova mesmo com legado > 0; previsto > 0 aprova", () => {
+  const base = {
+    custo: 1000,
+    tipoBeneficio: "hard_saving",
+    bcObs: "Premissas do business case"
+  };
+
+  // Previsto explícito 0 => reprova (o legado não "salva" a regra)
+  const zerado = avaliarBusinessCase({ ...base, beneficio: 45000, beneficioPrevisto: 0 });
+  assert.equal(zerado.completo, false);
+  assert.equal(zerado.pontos, 0);
+
+  // Previsto > 0 => aprova
+  const comPrevisto = avaliarBusinessCase({ ...base, beneficioPrevisto: 45000 });
+  assert.equal(comPrevisto.completo, true);
+  assert.equal(comPrevisto.pontos, 0.5);
+
+  // Sem o campo novo, o legado continua valendo (compatibilidade)
+  const legado = avaliarBusinessCase({ ...base, beneficio: 45000 });
+  assert.equal(legado.completo, true);
+  assert.equal(legado.pontos, 0.5);
+});
+
+test("business case v2.5: beneficioRealizado não entra na regra", () => {
+  const base = {
+    beneficioPrevisto: 10000,
+    custo: 2000,
+    tipoBeneficio: "cost_avoidance",
+    bcObs: "Observação"
+  };
+
+  const semRealizado = avaliarBusinessCase(base);
+  assert.equal(semRealizado.completo, true);
+  assert.equal(semRealizado.pontos, 0.5);
+
+  const realizadoZero = avaliarBusinessCase({ ...base, beneficioRealizado: 0 });
+  assert.equal(realizadoZero.completo, true);
+  assert.equal(realizadoZero.pontos, 0.5);
+
+  const realizadoTbd = avaliarBusinessCase({ ...base, beneficioRealizado: "TBD" });
+  assert.equal(realizadoTbd.completo, true, "'TBD' no realizado não invalida o BC");
+  assert.equal(realizadoTbd.pontos, 0.5);
+});
+
 test("plano de ação: pontua só ações CONCLUÍDAS (5 / total cada)", () => {
   assert.deepEqual(calcularPontosPlanoAcao([]), { pontos: 0, total: 0, concluidas: 0 });
   assert.equal(calcularPontosPlanoAcao(undefined).pontos, 0);

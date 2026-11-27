@@ -45,6 +45,68 @@ export function extractTokens(text) {
 }
 
 /**
+ * Converte um valor monetário em número finito (ou null).
+ * Aceita number e string ("1234.56", "1234,56", "R$ 1.234,56").
+ */
+export function numeroMonetario(valor) {
+  if (typeof valor === "number") return Number.isFinite(valor) ? valor : null;
+  if (typeof valor === "string") {
+    const s = valor.trim();
+    if (!s) return null;
+    const direto = Number(s);
+    if (Number.isFinite(direto)) return direto;
+    const bruto = s.replace(/R\$/g, "").replace(/\s/g, "");
+    const n = Number(bruto.replace(/\./g, "").replace(",", "."));
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+}
+
+/**
+ * Benefício previsto vigente: campo novo com fallback para o legado
+ * `beneficio`. Um 0 explícito NÃO cai no fallback.
+ */
+export function beneficioPrevistoDe(kaizen) {
+  const k = kaizen || {};
+  const previsto = numeroMonetario(k.beneficioPrevisto);
+  if (previsto !== null) return previsto;
+  const legado = numeroMonetario(k.beneficio);
+  return legado !== null ? legado : 0;
+}
+
+/**
+ * Migração idempotente do Business Case (v2.5.0):
+ *   • beneficioPrevisto ausente + beneficio existente => copia o legado;
+ *   • beneficioRealizado ausente/vazio => null;
+ *   • `beneficio` NUNCA é alterado nem apagado (espelho legado).
+ * Rodar duas vezes não muda nada.
+ */
+export function migrarBeneficioPrevistoRealizado(kaizen) {
+  if (!kaizen || typeof kaizen !== "object" || Array.isArray(kaizen)) return kaizen;
+
+  const temPrevisto =
+    Object.prototype.hasOwnProperty.call(kaizen, "beneficioPrevisto") &&
+    kaizen.beneficioPrevisto !== undefined &&
+    kaizen.beneficioPrevisto !== null &&
+    !(typeof kaizen.beneficioPrevisto === "string" && kaizen.beneficioPrevisto.trim() === "");
+
+  if (!temPrevisto) {
+    const legado = numeroMonetario(kaizen.beneficio);
+    kaizen.beneficioPrevisto = legado !== null ? legado : 0;
+  }
+
+  if (
+    kaizen.beneficioRealizado === undefined ||
+    kaizen.beneficioRealizado === null ||
+    (typeof kaizen.beneficioRealizado === "string" && kaizen.beneficioRealizado.trim() === "")
+  ) {
+    kaizen.beneficioRealizado = null;
+  }
+
+  return kaizen;
+}
+
+/**
  * Calcula B/C Ratio: benefício / custo (arredondado em 2 casas)
  */
 export function calculateBcRatio(beneficio, custo) {
@@ -278,7 +340,9 @@ export function createDefaultKaizen(user = {}) {
     aprovacaoStatus: "pendente", // pendente | aprovado | rejeitado
     expansao: false,
     expansaoArea: "",
-    beneficio: 0,
+    beneficio: 0, // espelho legado de beneficioPrevisto (compatibilidade)
+    beneficioPrevisto: 0,
+    beneficioRealizado: null,
     custo: 0,
     bcRatio: null,
     bcObs: "",
@@ -324,8 +388,8 @@ export function validateKaizen(kaizen, isFinal = false) {
     errors.push("O nome do projeto é obrigatório.");
   }
 
-  // Validação condicional: benefício > 0 exige tipoBeneficio
-  const b = Number(kaizen.beneficio) || 0;
+  // Validação condicional: benefício previsto > 0 exige tipoBeneficio
+  const b = beneficioPrevistoDe(kaizen);
   if (b > 0 && !kaizen.tipoBeneficio) {
     errors.push("Informe o tipo de benefício (Hard Saving ou Cost Avoidance) para benefício maior que zero.");
   }
@@ -444,7 +508,7 @@ export function validateWizardStep(kaizen, step) {
     }
   } else if (s === 8) {
     // 8: Resultados (Business Case)
-    const b = Number(kaizen.beneficio) || 0;
+    const b = beneficioPrevistoDe(kaizen);
     if (b > 0 && !kaizen.tipoBeneficio) {
       errors.push("Informe o tipo de benefício (Hard Saving ou Cost Avoidance).");
     }
@@ -565,8 +629,15 @@ export function migrateLegacyProject(legacy, user = {}) {
     howMuch: legacy.w2h?.howMuch ?? legacy.w_howmuch ?? legacy.WHowMuch ?? ""
   };
 
-  const beneficio = Number(legacy.beneficio ?? legacy.Beneficio) || 0;
-  const custo = Number(legacy.custo ?? legacy.Custo) || 0;
+  const beneficio = numeroMonetario(legacy.beneficio ?? legacy.Beneficio) ?? 0;
+  const custo = numeroMonetario(legacy.custo ?? legacy.Custo) ?? 0;
+  // v2.5.0 — previsto/realizado (o campo legado `beneficio` é preservado).
+  const beneficioPrevisto = numeroMonetario(
+    legacy.beneficioPrevisto ?? legacy.BeneficioPrevisto
+  ) ?? beneficio;
+  const beneficioRealizado = numeroMonetario(
+    legacy.beneficioRealizado ?? legacy.BeneficioRealizado
+  );
   // Valor manual antigo preservado uma única vez (auditoria/rollback).
   const pctLegado = legacy.percentualManualLegado ?? legacy.percentual ?? legacy.Percentual;
 
@@ -604,8 +675,10 @@ export function migrateLegacyProject(legacy, user = {}) {
     expansao: Boolean(legacy.expansao ?? legacy.Expansao),
     expansaoArea: legacy.expansaoArea || legacy.ExpansaoArea || "",
     beneficio,
+    beneficioPrevisto,
+    beneficioRealizado,
     custo,
-    bcRatio: calculateBcRatio(beneficio, custo),
+    bcRatio: calculateBcRatio(beneficioPrevisto, custo),
     bcObs: legacy.bcObs || legacy.BCObs || "",
     riscos,
     links: Array.isArray(legacy.links) ? legacy.links : [],

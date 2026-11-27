@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="app-version" content="2.4.1">
-  <meta name="app-build" content="20261127-02">
+  <meta name="app-version" content="2.5.0">
+  <meta name="app-build" content="20261127-03">
   <title>Painel Executivo · Kaizen Hub v2</title>
-  <link rel="stylesheet" href="style.css?v=20261127-02">
-  <link rel="stylesheet" href="admin.css?v=20261127-02">
+  <link rel="stylesheet" href="style.css?v=20261127-03">
+  <link rel="stylesheet" href="admin.css?v=20261127-03">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
@@ -22,7 +22,7 @@
   </div>
   <div class="topbar-right">
     <button type="button" id="btnToggleTheme" class="btn ghost small" aria-label="Alternar tema">🌙 Tema escuro</button>
-    <a href="index.html?v=20261127-02" class="btn ghost small">← Meus projetos</a>
+    <a href="index.html?v=20261127-03" class="btn ghost small">← Meus projetos</a>
     <span id="userChip" class="chip"></span>
     <button type="button" id="btnLogout" class="btn ghost small">Sair</button>
   </div>
@@ -35,7 +35,7 @@
     <p class="muted" id="deniedMsg" style="margin:12px 0 20px">
       Este painel é exclusivo para administradores.
     </p>
-    <a href="index.html?v=20261127-02" class="btn primary block">Voltar ao hub</a>
+    <a href="index.html?v=20261127-03" class="btn primary block">Voltar ao hub</a>
   </div>
 </main>
 
@@ -78,20 +78,30 @@
     </div>
 
     <!-- KPIs -->
-    <div class="kpis">
+    <div class="kpis kpis-5">
       <div class="kpi"><small>PROJETOS</small><strong id="kProj">0</strong></div>
       <div class="kpi"><small>CONCLUSÃO MÉDIA</small><strong id="kConc">0%</strong></div>
-      <div class="kpi"><small>HARD SAVING TOTAL</small><strong id="kHard">R$ 0,00</strong></div>
-      <div class="kpi"><small>COST AVOIDANCE</small><strong id="kCA">R$ 0,00</strong></div>
+      <div class="kpi"><small>INVESTIMENTO TOTAL</small><strong id="kInv">R$ 0,00</strong></div>
+      <div class="kpi"><small>BENEFÍCIO FINANCEIRO (PREVISTO)</small><strong id="kBen">R$ 0,00</strong></div>
+      <div class="kpi kpi-realizado"><small>BENEFÍCIO REALIZADO</small><strong id="kBenReal">R$ 0,00</strong></div>
     </div>
 
-    <!-- Resumo de investimento e retorno -->
-    <div class="kpis kpis-sec">
-      <div class="kpi"><small>INVESTIMENTO TOTAL</small><strong id="kInv">R$ 0,00</strong></div>
-      <div class="kpi"><small>BENEFÍCIO TOTAL</small><strong id="kBen">R$ 0,00</strong></div>
-      <div class="kpi"><small>B/C MÉDIO PONDERADO</small><strong id="kBcAvg">—</strong></div>
+    <!-- Segunda linha: benefícios por tipo e conclusão -->
+    <div class="kpis kpis-sec kpis-5">
+      <div class="kpi"><small>HARD SAVING PREVISTO</small><strong id="kHard">R$ 0,00</strong></div>
+      <div class="kpi"><small>HARD SAVING REALIZADO</small><strong id="kHardReal">R$ 0,00</strong></div>
+      <div class="kpi"><small>COST AVOIDANCE PREVISTO</small><strong id="kCA">R$ 0,00</strong></div>
+      <div class="kpi"><small>COST AVOIDANCE REALIZADO</small><strong id="kCAReal">R$ 0,00</strong></div>
+      <div class="kpi"><small>PROJETOS CONCLUÍDOS</small><strong id="kConcluidos">0</strong></div>
+    </div>
+
+    <!-- Resumo de retorno e aprovação -->
+    <div class="kpis kpis-sec kpis-ter">
+      <div class="kpi"><small>B/C MÉDIO PONDERADO (PREVISTO)</small><strong id="kBcAvg">—</strong></div>
       <div class="kpi"><small>PENDENTES DE APROVAÇÃO</small><strong id="kPending">0</strong></div>
     </div>
+
+    <p class="kpi-note">COMO LER OS VALORES REALIZADOS — O realizado soma apenas os valores informados em Projetos. Campos vazios aparecem como 'Não informado'; zero preenchido conta como informado. Valores vazios e 'TBD' não entram nas somas financeiras.</p>
 
     <!-- RESUMO POR ÁREA -->
     <section class="card">
@@ -105,6 +115,8 @@
               <th scope="col" class="num">Conclusão média</th>
               <th scope="col" class="num">Hard Saving</th>
               <th scope="col" class="num">Cost Avoidance</th>
+              <th scope="col" class="num">Benefício (previsto)</th>
+              <th scope="col" class="num">Benefício Realizado</th>
               <th scope="col" class="num">Investimento</th>
             </tr>
           </thead>
@@ -129,14 +141,14 @@
       </section>
 
       <section class="card chart-card">
-        <h4>G2 · Investimento × Benefício por área (R$)</h4>
+        <h4>G2 · Investimento × Benefício (previsto) por área (R$)</h4>
         <div class="chart-wrapper">
           <canvas id="chartG2" aria-label="Investimento versus Benefício por área" role="img"></canvas>
         </div>
       </section>
 
       <section class="card chart-card">
-        <h4>G3 · Benefício por área e tipo (R$)</h4>
+        <h4>G3 · Benefício previsto por área e tipo (R$)</h4>
         <div class="chart-wrapper">
           <canvas id="chartG3" aria-label="Benefício por área e tipo" role="img"></canvas>
         </div>
@@ -294,6 +306,6 @@
 
 <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
-<script type="module" src="admin.js?v=20261127-02"></script>
+<script type="module" src="admin.js?v=20261127-03"></script>
 </body>
 </html>

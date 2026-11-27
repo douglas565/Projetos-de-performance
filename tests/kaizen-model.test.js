@@ -28,7 +28,9 @@ import {
   canUserEdit,
   migrateLegacyActions,
   migrateLegacyRisks,
-  migrateLegacyProject
+  migrateLegacyProject,
+  migrarBeneficioPrevistoRealizado,
+  beneficioPrevistoDe
 } from "../js/kaizen-model.js";
 
 test("generateKaizenCode() gera código no formato KZ-YYYYMMDD-XXXX", () => {
@@ -411,4 +413,63 @@ test("migrateLegacyProject() recalcula percentual dos campos e ignora valor manu
   assert.equal(v2.percentual, 24, "4/17 => 24%, não o 100% manual");
   assert.equal(v2.percentualOrigem, "auto");
   assert.equal(v2.percentualManualLegado, 100, "valor manual preservado para rollback");
+});
+
+// ------------------------------------------------------------
+// v2.5.0 — Benefício previsto × realizado
+// ------------------------------------------------------------
+test("createDefaultKaizen() nasce com beneficioPrevisto=0 e beneficioRealizado=null", () => {
+  const k = createDefaultKaizen({ uid: "u1", email: "u1@empresa.com" });
+  assert.equal(k.beneficioPrevisto, 0);
+  assert.equal(k.beneficioRealizado, null);
+  assert.equal(k.beneficio, 0, "espelho legado continua existindo");
+});
+
+test("migrarBeneficioPrevistoRealizado() copia o legado e é idempotente (2 execuções)", () => {
+  const k = { id: "k1", beneficio: 12345.67, custo: 1000 };
+  const somaAntes = Number(k.beneficio);
+
+  migrarBeneficioPrevistoRealizado(k);
+  assert.equal(k.beneficioPrevisto, 12345.67);
+  assert.equal(k.beneficioRealizado, null);
+  assert.equal(k.beneficio, 12345.67, "beneficio legado intacto");
+
+  const snapshot = JSON.stringify(k);
+  migrarBeneficioPrevistoRealizado(k);
+  assert.equal(JSON.stringify(k), snapshot, "segunda execução não muda nada");
+  assert.equal(Number(k.beneficio), somaAntes, "soma antes = soma depois");
+  assert.equal(k.beneficioPrevisto, 12345.67);
+});
+
+test("migrarBeneficioPrevistoRealizado() preserva previsto explícito (inclusive 0) e realizado informado", () => {
+  const explicito = { beneficio: 5000, beneficioPrevisto: 0, beneficioRealizado: 0 };
+  migrarBeneficioPrevistoRealizado(explicito);
+  assert.equal(explicito.beneficioPrevisto, 0, "0 explícito não cai no fallback");
+  assert.equal(explicito.beneficioRealizado, 0, "0 informado permanece 0");
+  assert.equal(explicito.beneficio, 5000, "beneficio legado intacto");
+
+  const semBeneficio = { id: "k2" };
+  migrarBeneficioPrevistoRealizado(semBeneficio);
+  assert.equal(semBeneficio.beneficioPrevisto, 0);
+  assert.equal(semBeneficio.beneficioRealizado, null);
+
+  const vazio = { beneficio: 10, beneficioRealizado: "" };
+  migrarBeneficioPrevistoRealizado(vazio);
+  assert.equal(vazio.beneficioRealizado, null);
+  assert.equal(vazio.beneficioPrevisto, 10);
+});
+
+test("beneficioPrevistoDe() usa fallback do legado e respeita previsto explícito", () => {
+  assert.equal(beneficioPrevistoDe({ beneficio: 800 }), 800);
+  assert.equal(beneficioPrevistoDe({ beneficioPrevisto: 0, beneficio: 800 }), 0);
+  assert.equal(beneficioPrevistoDe({ beneficioPrevisto: 1200, beneficio: 800 }), 1200);
+  assert.equal(beneficioPrevistoDe({}), 0);
+});
+
+test("migrateLegacyProject() preenche previsto a partir do benefício legado", () => {
+  const v2 = migrateLegacyProject({ Projeto: "Legado", Beneficio: "60000", Custo: "15000" }, { uid: "u1" });
+  assert.equal(v2.beneficio, 60000);
+  assert.equal(v2.beneficioPrevisto, 60000);
+  assert.equal(v2.beneficioRealizado, null);
+  assert.equal(v2.bcRatio, 4);
 });

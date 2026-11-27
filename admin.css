@@ -102,11 +102,34 @@
 .kpis-sec .kpi:nth-child(3)::before { background: #8B5CF6; }
 .kpis-sec .kpi:nth-child(4)::before { background: var(--danger); }
 
+/* Linhas de 5 KPIs (previsto × realizado) e de 2 KPIs */
+.kpis-5 { grid-template-columns: repeat(5, 1fr); }
+.kpis-ter { grid-template-columns: repeat(2, 1fr); }
+
+/* Destaque do BENEFÍCIO REALIZADO */
+.kpi.kpi-realizado {
+  border-color: var(--ok);
+  background: linear-gradient(180deg, rgba(23, 166, 115, 0.12), transparent 72%);
+}
+.kpi.kpi-realizado strong { color: var(--ok); }
+
+/* Nota de leitura dos valores realizados */
+.kpi-note {
+  margin: -6px 0 24px;
+  padding: 10px 14px;
+  border-left: 3px solid var(--brand);
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
 @media (max-width: 1024px) {
-  .kpis { grid-template-columns: repeat(2, 1fr); }
+  .kpis, .kpis-5, .kpis-ter { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 580px) {
-  .kpis { grid-template-columns: 1fr; }
+  .kpis, .kpis-5, .kpis-ter { grid-template-columns: 1fr; }
 }
 
 /* ---------- Tabelas Administrativas ---------- */

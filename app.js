@@ -28,7 +28,9 @@ import {
   calculateRiskScore,
   canUserRead,
   canUserEdit,
-  normalizeString
+  normalizeString,
+  migrarBeneficioPrevistoRealizado,
+  beneficioPrevistoDe
 } from "./js/kaizen-model.js";
 import {
   aplicarPercentualAutomatico,
@@ -415,8 +417,8 @@ function renderHub() {
   // Estatísticas no topo
   const total = filtered.length;
   const avgPct = total > 0 ? Math.round(filtered.reduce((acc, k) => acc + (Number(k.percentual) || 0), 0) / total) : 0;
-  const totalHS = filtered.filter((k) => k.tipoBeneficio === "hard_saving").reduce((acc, k) => acc + (Number(k.beneficio) || 0), 0);
-  const totalCA = filtered.filter((k) => k.tipoBeneficio === "cost_avoidance").reduce((acc, k) => acc + (Number(k.beneficio) || 0), 0);
+  const totalHS = filtered.filter((k) => k.tipoBeneficio === "hard_saving").reduce((acc, k) => acc + beneficioPrevistoDe(k), 0);
+  const totalCA = filtered.filter((k) => k.tipoBeneficio === "cost_avoidance").reduce((acc, k) => acc + beneficioPrevistoDe(k), 0);
 
   const hsFmt = totalHS.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   const caFmt = totalCA.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -698,6 +700,9 @@ function setupEditorUI() {
 
 function openEditor(kaizen, isNew = false) {
   activeKaizen = JSON.parse(JSON.stringify(kaizen));
+  // v2.5.0 — migração idempotente na carga/reabertura: previsto/realizado
+  // derivados do legado `beneficio` (que permanece intacto).
+  migrarBeneficioPrevistoRealizado(activeKaizen);
 
   const canRead = canUserRead(activeKaizen, currentUser, currentUserProfile);
   if (!canRead) {
@@ -959,8 +964,14 @@ function renderReviewStep() {
     {
       step: 8,
       title: "8. Resultados (Business Case)",
-      desc: `Benefício: ${BRL(activeKaizen.beneficio)} · Custo: ${BRL(activeKaizen.custo)} · B/C: ${activeKaizen.bcRatio !== null ? activeKaizen.bcRatio + "x" : "—"}`,
-      pass: Boolean(Number(activeKaizen.beneficio) > 0 ? Boolean(activeKaizen.tipoBeneficio) : true)
+      desc: (() => {
+        const previsto = beneficioPrevistoDe(activeKaizen);
+        const realizado = activeKaizen.beneficioRealizado === null || activeKaizen.beneficioRealizado === undefined || activeKaizen.beneficioRealizado === ""
+          ? "Não informado"
+          : BRL(activeKaizen.beneficioRealizado);
+        return `Previsto: ${BRL(previsto)} · Realizado: ${realizado} · Custo: ${BRL(activeKaizen.custo)} · B/C: ${activeKaizen.bcRatio !== null ? activeKaizen.bcRatio + "x" : "—"}`;
+      })(),
+      pass: Boolean(beneficioPrevistoDe(activeKaizen) > 0 ? Boolean(activeKaizen.tipoBeneficio) : true)
     },
     {
       step: 9,
@@ -1093,8 +1104,10 @@ function populateEditorForm(k, canEdit) {
   $('[data-f="expansao"]').checked = Boolean(k.expansao);
   $('[data-f="expansaoArea"]').value = k.expansaoArea || "";
 
-  // Bloco 8: Resultados
-  $('[data-f="beneficio"]').value = k.beneficio || "";
+  // Bloco 8: Resultados (v2.5.0 — previsto + realizado; legado espelhado)
+  $('[data-f="beneficioPrevisto"]').value = beneficioPrevistoDe(k) || "";
+  $('[data-f="beneficioRealizado"]').value =
+    k.beneficioRealizado === null || k.beneficioRealizado === undefined ? "" : k.beneficioRealizado;
   $('[data-f="custo"]').value = k.custo || "";
   $('[data-f="tipoBeneficio"]').value = k.tipoBeneficio || "";
   $('[data-f="bcObs"]').value = k.bcObs || "";
@@ -1141,7 +1154,12 @@ function populateEditorForm(k, canEdit) {
 }
 
 function updateBcRatioDisplay() {
-  const b = Number($('[data-f="beneficio"]')?.value) || 0;
+  const previstoEl = $('[data-f="beneficioPrevisto"]');
+  const legadoEl = $('[data-f="beneficio"]');
+  const rawPrevisto = previstoEl
+    ? previstoEl.value
+    : (legadoEl ? legadoEl.value : (activeKaizen ? beneficioPrevistoDe(activeKaizen) : 0));
+  const b = Number(rawPrevisto) || 0;
   const c = Number($('[data-f="custo"]')?.value) || 0;
   const ratio = calculateBcRatio(b, c);
   const ratioEl = $("#bcRatio");
@@ -1207,10 +1225,20 @@ function handleFieldInput(target) {
     activeKaizen.participantes = target.value.split(";").map((p) => p.trim()).filter(Boolean);
   } else if (f === "expansao") {
     activeKaizen.expansao = target.checked;
-  } else if (f === "beneficio" || f === "custo") {
-    activeKaizen[f] = Number(target.value) || 0;
+  } else if (f === "beneficioPrevisto" || f === "beneficio") {
+    const valor = Number(target.value) || 0;
+    activeKaizen.beneficioPrevisto = valor;
+    // Espelho legado: `beneficio` continua sendo gravado (compatibilidade).
+    activeKaizen.beneficio = valor;
     updateBcRatioDisplay();
-    activeKaizen.bcRatio = calculateBcRatio(activeKaizen.beneficio, activeKaizen.custo);
+    activeKaizen.bcRatio = calculateBcRatio(activeKaizen.beneficioPrevisto, activeKaizen.custo);
+  } else if (f === "beneficioRealizado") {
+    const raw = String(target.value ?? "").trim();
+    activeKaizen.beneficioRealizado = raw === "" ? null : (Number(raw) || 0);
+  } else if (f === "custo") {
+    activeKaizen.custo = Number(target.value) || 0;
+    updateBcRatioDisplay();
+    activeKaizen.bcRatio = calculateBcRatio(activeKaizen.beneficioPrevisto, activeKaizen.custo);
   } else {
     activeKaizen[f] = target.value;
     if (f === "projeto") {
@@ -1254,6 +1282,7 @@ function triggerSave() {
         onReload: () => {
           activeKaizen = JSON.parse(JSON.stringify(serverData));
           activeKaizen.id = serverData.id || activeKaizen.id;
+          migrarBeneficioPrevistoRealizado(activeKaizen);
           populateEditorForm(activeKaizen, true);
           setSaveStatus("saved");
           showToast("Versão mais recente do servidor recarregada.", "info");

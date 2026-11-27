@@ -21,7 +21,9 @@ import {
 import {
   generateSearchKeywords,
   migrateLegacyProject,
-  normalizeKaizenSharing
+  normalizeKaizenSharing,
+  migrarBeneficioPrevistoRealizado,
+  beneficioPrevistoDe
 } from "./kaizen-model.js";
 import { aplicarPercentualAutomatico } from "./percentual.js";
 import {
@@ -54,7 +56,7 @@ export function subscribeToHubKaizens(user, userProfile, onUpdate, onError) {
       qAdmin,
       (snapshot) => {
         const list = snapshot.docs
-          .map((d) => ({ id: d.id, ...d.data() }))
+          .map((d) => migrarBeneficioPrevistoRealizado({ id: d.id, ...d.data() }))
           .filter((k) => !k.arquivado);
         onUpdate(list);
       },
@@ -105,7 +107,7 @@ export function subscribeToHubKaizens(user, userProfile, onUpdate, onError) {
     qMine,
     (snapshot) => {
       mineMap.clear();
-      snapshot.docs.forEach((d) => mineMap.set(d.id, { id: d.id, ...d.data() }));
+      snapshot.docs.forEach((d) => mineMap.set(d.id, migrarBeneficioPrevistoRealizado({ id: d.id, ...d.data() })));
       notifyCombined();
     },
     (err) => handleListenerError("meus kaizens", err)
@@ -115,7 +117,7 @@ export function subscribeToHubKaizens(user, userProfile, onUpdate, onError) {
     qShared,
     (snapshot) => {
       sharedMap.clear();
-      snapshot.docs.forEach((d) => sharedMap.set(d.id, { id: d.id, ...d.data() }));
+      snapshot.docs.forEach((d) => sharedMap.set(d.id, migrarBeneficioPrevistoRealizado({ id: d.id, ...d.data() })));
       notifyCombined();
     },
     (err) => handleListenerError("kaizens compartilhados", err)
@@ -152,6 +154,10 @@ export async function saveKaizenWithTransaction(kaizenId, kaizenData, user) {
   if (kaizenData.percentualOrigem !== "auto" && kaizenData.percentualManualLegado === undefined) {
     kaizenData.percentualManualLegado = Number(kaizenData.percentual) || 0;
   }
+  // v2.5.0 — previsto/realizado: migração idempotente e espelho legado
+  // (`beneficio` continua gravado, sempre igual ao previsto) no ponto único.
+  migrarBeneficioPrevistoRealizado(kaizenData);
+  kaizenData.beneficio = beneficioPrevistoDe(kaizenData);
   aplicarPercentualAutomatico(kaizenData);
 
   return await runTransaction(db, async (transaction) => {

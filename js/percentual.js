@@ -9,9 +9,10 @@
 //   4) padronizacao ..... 1,0  texto preenchido
 //   5) monitoramento .... 0,5  texto preenchido
 //   6) business case .... 0,5  SOMENTE se os 4 campos do step 8 estiverem completos:
-//                              beneficio numérico > 0, custo numérico finito >= 0,
-//                              tipoBeneficio preenchido e bcObs preenchido
-//                              (bcRatio é derivado e não pontua)
+//                              beneficioPrevisto > 0 (fallback para beneficio legado),
+//                              custo numérico finito >= 0, tipoBeneficio e bcObs
+//                              preenchidos (bcRatio é derivado e não pontua;
+//                              beneficioRealizado não entra na regra)
 //   7) plano de ação .... até 5,0  ->  5 * (ações CONCLUÍDAS) / (total de ações)
 //                                      status === "concluida"; 0 ações = 0; teto 5
 //   8) 5W2H ............. até 7,0  ->  1 ponto por campo preenchido (7 campos)
@@ -57,10 +58,14 @@ function numeroPreenchido(valor) {
 
 /**
  * Business Case (step 8): 0,5 ponto apenas com os 4 campos completos.
+ * v2.5.0 — a regra usa o benefício PREVISTO (fallback para o `beneficio`
+ * legado quando o campo novo está ausente). O benefício REALIZADO não entra
+ * na regra: é informativo e pode ficar vazio.
  */
 export function avaliarBusinessCase(kaizen) {
   const k = kaizen || {};
-  const beneficio = numeroPreenchido(k.beneficio);
+  const temPrevisto = k.beneficioPrevisto !== undefined && k.beneficioPrevisto !== null;
+  const beneficio = temPrevisto ? numeroPreenchido(k.beneficioPrevisto) : numeroPreenchido(k.beneficio);
   const custo = numeroPreenchido(k.custo);
   const completo =
     beneficio !== null &&

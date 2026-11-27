@@ -48,10 +48,10 @@ function loadXlsx() {
 
 const XLSX = loadXlsx();
 
-test("Aba Kaizens possui exatamente 57 colunas na ordem normatizada da spec §2.4.2", () => {
+test("Aba Kaizens possui exatamente 59 colunas (57 + previsto + realizado)", () => {
   const kaizensDef = SHEETS.find((s) => s.name === "Kaizens");
   assert.ok(kaizensDef, "Aba Kaizens deve existir");
-  assert.equal(kaizensDef.headers.length, 57, "Deve conter exatamente 57 colunas");
+  assert.equal(kaizensDef.headers.length, 59, "Deve conter exatamente 59 colunas");
 
   // Conferir primeiras e últimas colunas
   assert.equal(kaizensDef.headers[0], "ID do documento");
@@ -60,10 +60,12 @@ test("Aba Kaizens possui exatamente 57 colunas na ordem normatizada da spec §2.
   assert.equal(kaizensDef.headers[5], "Data");
   assert.equal(kaizensDef.headers[12], "Arquivado");
   assert.equal(kaizensDef.headers[35], "Benefício Anual (R$)");
-  assert.equal(kaizensDef.headers[36], "Custo de Implantação (R$)");
-  assert.equal(kaizensDef.headers[37], "B/C Ratio");
-  assert.equal(kaizensDef.headers[53], "Criado em");
-  assert.equal(kaizensDef.headers[56], "Atualizado por");
+  assert.equal(kaizensDef.headers[36], "Benefício Previsto (R$)");
+  assert.equal(kaizensDef.headers[37], "Benefício Realizado (R$)");
+  assert.equal(kaizensDef.headers[38], "Custo de Implantação (R$)");
+  assert.equal(kaizensDef.headers[39], "B/C Ratio");
+  assert.equal(kaizensDef.headers[55], "Criado em");
+  assert.equal(kaizensDef.headers[58], "Atualizado por");
 });
 
 test("Normalizadores tratam tipos, nulos, datas e injeção de fórmulas", () => {
@@ -115,7 +117,7 @@ test("normalizeKaizenRow() mapeia campos, nulos e fallbacks", () => {
   };
 
   const row = normalizeKaizenRow(k, usersById);
-  assert.equal(row.length, 57);
+  assert.equal(row.length, 59);
 
   // 1: ID
   assert.equal(row[0], "kz-001");
@@ -127,18 +129,39 @@ test("normalizeKaizenRow() mapeia campos, nulos e fallbacks", () => {
   assert.equal(row[29], "Sim");
   // 31: Pilar Qualidade ("Não")
   assert.equal(row[30], "Não");
-  // 36: Benefício (50000)
+  // 36: Benefício Anual legado (50000)
   assert.equal(row[35], 50000);
-  // 37: Custo (null)
-  assert.equal(row[36], null);
-  // 38: bcRatio (null)
+  // 37: Benefício Previsto (fallback do legado)
+  assert.equal(row[36], 50000);
+  // 38: Benefício Realizado (não informado => null)
   assert.equal(row[37], null);
-  // 40: Dono Nome (fallback de usersById)
-  assert.equal(row[39], "Douglas");
-  // 41: Dono Email (fallback de usersById)
-  assert.equal(row[40], "douglas@empresa.com");
-  // 43: Contagem de Ações
-  assert.equal(row[42], 2);
+  // 39: Custo (null)
+  assert.equal(row[38], null);
+  // 40: bcRatio (null)
+  assert.equal(row[39], null);
+  // 42: Dono Nome (fallback de usersById)
+  assert.equal(row[41], "Douglas");
+  // 43: Dono Email (fallback de usersById)
+  assert.equal(row[42], "douglas@empresa.com");
+  // 45: Contagem de Ações
+  assert.equal(row[44], 2);
+});
+
+test("normalizeKaizenRow() exporta previsto/realizado (realizado vazio quando não informado)", () => {
+  const base = { id: "kz-002", codigo: "KZ-2", projeto: "P" };
+  const semRealizado = normalizeKaizenRow({ ...base, beneficioPrevisto: 1000, beneficio: 1000 });
+  assert.equal(semRealizado[36], 1000);
+  assert.equal(semRealizado[37], null, "campo vazio sai como célula vazia");
+
+  const comRealizado = normalizeKaizenRow({ ...base, beneficioPrevisto: 1000, beneficio: 1000, beneficioRealizado: 0 });
+  assert.equal(comRealizado[37], 0, "zero preenchido conta como informado");
+
+  const tbd = normalizeKaizenRow({ ...base, beneficioPrevisto: 1000, beneficioRealizado: "TBD" });
+  assert.equal(tbd[37], null, "'TBD' não entra");
+
+  const soPrevisto = normalizeKaizenRow({ ...base, beneficioPrevisto: 2500 });
+  assert.equal(soPrevisto[35], 2500, "coluna legada cai no previsto quando ausente");
+  assert.equal(soPrevisto[36], 2500);
 });
 
 test("Deduplicação de compartilhamentos funciona conforme §2.4.4", () => {
@@ -257,8 +280,8 @@ test("buildWorkbook() cria 9 abas válidas com autofilter e cols", () => {
   assert.deepEqual(Array.from(readWb.SheetNames), Array.from(wb.SheetNames));
 
   const kaizenData = XLSX.utils.sheet_to_json(readWb.Sheets["Kaizens"], { header: 1 });
-  // Linha 0 = cabeçalho (57 colunas)
-  assert.equal(kaizenData[0].length, 57);
+  // Linha 0 = cabeçalho (59 colunas)
+  assert.equal(kaizenData[0].length, 59);
   // Linhas 1 e 2 = kaizens k1 e k2
   assert.equal(kaizenData.length, 3);
 

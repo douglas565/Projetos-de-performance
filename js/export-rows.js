@@ -2,6 +2,8 @@
 // js/export-rows.js — Definição das Abas, Normalizadores e Workbook
 // ============================================================
 
+import { beneficioPrevistoDe, beneficioRealizadoDe } from "./dashboard-metrics.js";
+
 export const SHEETS = [
   {
     name: "Resumo",
@@ -46,6 +48,8 @@ export const SHEETS = [
       "Pilar · Pessoas",
       "Tipo de Benefício",
       "Benefício Anual (R$)",
+      "Benefício Previsto (R$)",
+      "Benefício Realizado (R$)",
       "Custo de Implantação (R$)",
       "B/C Ratio",
       "Observação B/C",
@@ -267,7 +271,9 @@ export function normalizeKaizenRow(k = {}, usersById = {}) {
     formatBoolean(Boolean(pilares.lucratividade)),
     formatBoolean(Boolean(pilares.pessoas)),
     formatText(k.tipoBeneficio),
-    formatNumber(k.beneficio),
+    formatNumber(k.beneficio != null ? k.beneficio : beneficioPrevistoDe(k)),
+    formatNumber(beneficioPrevistoDe(k)),
+    formatNumber(beneficioRealizadoDe(k)),
     formatNumber(k.custo),
     formatNumber(k.bcRatio),
     formatText(k.bcObs),

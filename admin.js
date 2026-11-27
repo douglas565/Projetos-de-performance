@@ -20,6 +20,7 @@ import { showToast, initThemeToggle, escapeHtml } from "./js/ui.js";
 import { initVersionProbe, getLocalIdentity, formatIdentity } from "./js/version.js";
 import { restoreKaizen } from "./js/db.js";
 import { calcularPercentual } from "./js/percentual.js";
+import { agregarDashboard, beneficioPrevistoDe, beneficioRealizadoDe } from "./js/dashboard-metrics.js";
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => document.querySelectorAll(s);
@@ -61,10 +62,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Popula dados de demonstração para renderizar os 6 gráficos no teste sem Firebase
       allKaizens = [
-        { id: "k1", data: "2026-10-05", criadoEm: "2026-10-05", areaNegocio: "Operação", status: "concluido", tipo: "kaizen", percentual: 100, beneficio: 65000, custo: 12000, tipoBeneficio: "hard_saving", pilares: { seguranca: true, qualidade: true } },
-        { id: "k2", data: "2026-10-20", criadoEm: "2026-10-20", areaNegocio: "DAF", status: "em_andamento", tipo: "performance", percentual: 50, beneficio: 30000, custo: 6000, tipoBeneficio: "cost_avoidance", pilares: { lucratividade: true } },
-        { id: "k3", data: "2026-11-02", criadoEm: "2026-11-02", areaNegocio: "Engenharia", status: "concluido", tipo: "kaizen", percentual: 100, beneficio: 45000, custo: 8000, tipoBeneficio: "hard_saving", pilares: { entrega: true, pessoas: true } },
-        { id: "k4", data: "2026-11-12", criadoEm: "2026-11-12", areaNegocio: "TI / Digital", status: "rascunho", tipo: "performance", percentual: 25, beneficio: 15000, custo: 3000, tipoBeneficio: "cost_avoidance", pilares: { qualidade: true } }
+        { id: "k1", data: "2026-10-05", criadoEm: "2026-10-05", areaNegocio: "Operação", status: "concluido", tipo: "kaizen", percentual: 100, beneficio: 65000, beneficioPrevisto: 65000, beneficioRealizado: 65000, custo: 12000, tipoBeneficio: "hard_saving", pilares: { seguranca: true, qualidade: true } },
+        { id: "k2", data: "2026-10-20", criadoEm: "2026-10-20", areaNegocio: "DAF", status: "em_andamento", tipo: "performance", percentual: 50, beneficio: 30000, beneficioPrevisto: 30000, beneficioRealizado: null, custo: 6000, tipoBeneficio: "cost_avoidance", pilares: { lucratividade: true } },
+        { id: "k3", data: "2026-11-02", criadoEm: "2026-11-02", areaNegocio: "Engenharia", status: "concluido", tipo: "kaizen", percentual: 100, beneficio: 45000, beneficioPrevisto: 45000, beneficioRealizado: 45000, custo: 8000, tipoBeneficio: "hard_saving", pilares: { entrega: true, pessoas: true } },
+        { id: "k4", data: "2026-11-12", criadoEm: "2026-11-12", areaNegocio: "TI / Digital", status: "rascunho", tipo: "performance", percentual: 25, beneficio: 15000, beneficioPrevisto: 15000, beneficioRealizado: "", custo: 3000, tipoBeneficio: "cost_avoidance", pilares: { qualidade: true } }
       ];
       allUsers = [
         { uid: "u1", nome: "Carlos Silva", email: "carlos@empresa.com", status: "active", role: "user" },
@@ -381,53 +382,43 @@ function getFilteredKaizens() {
 
 function renderDashboard() {
   const lista = getFilteredKaizens();
+  const resumo = agregarDashboard(lista);
 
-  // KPIs
-  const total = lista.length;
-  const concMedia = total ? lista.reduce((a, k) => a + (Number(k.percentual) || 0), 0) / total : 0;
-  const hardSaving = lista.filter((k) => k.tipoBeneficio === "hard_saving").reduce((a, k) => a + (Number(k.beneficio) || 0), 0);
-  const costAvoidance = lista.filter((k) => k.tipoBeneficio === "cost_avoidance").reduce((a, k) => a + (Number(k.beneficio) || 0), 0);
-  const investimento = lista.reduce((a, k) => a + (Number(k.custo) || 0), 0);
-  const beneficioTotal = hardSaving + costAvoidance;
-  const bcMedio = investimento > 0 ? (beneficioTotal / investimento).toFixed(2) : (beneficioTotal > 0 ? "∞" : "—");
+  const setKpi = (sel, valor) => {
+    const el = $(sel);
+    if (el) el.textContent = valor;
+  };
+
+  // KPIs — previsto × realizado
+  setKpi("#kProj", String(resumo.total));
+  setKpi("#kConc", PCT(resumo.conclusaoMedia));
+  setKpi("#kInv", BRL(resumo.investimento));
+  setKpi("#kBen", BRL(resumo.beneficioPrevisto));
+  setKpi("#kBenReal", BRL(resumo.beneficioRealizado));
+  setKpi("#kHard", BRL(resumo.hardSaving.previsto));
+  setKpi("#kHardReal", BRL(resumo.hardSaving.realizado));
+  setKpi("#kCA", BRL(resumo.costAvoidance.previsto));
+  setKpi("#kCAReal", BRL(resumo.costAvoidance.realizado));
+  setKpi("#kConcluidos", String(resumo.concluidos));
+
+  const elBenReal = $("#kBenReal");
+  if (elBenReal) {
+    elBenReal.title = "Soma apenas os valores informados em Projetos (vazios e 'TBD' não entram).";
+  }
+
+  const bcMedio = resumo.investimento > 0
+    ? (resumo.beneficioPrevisto / resumo.investimento).toFixed(2)
+    : (resumo.beneficioPrevisto > 0 ? "∞" : "—");
+  setKpi("#kBcAvg", bcMedio !== "—" && bcMedio !== "∞" ? `${bcMedio}x` : bcMedio);
+
   const pendentesUsers = allUsers.filter((u) => u.status === "pending").length;
+  setKpi("#kPending", String(pendentesUsers));
 
-  $("#kProj").textContent = String(total);
-  $("#kConc").textContent = PCT(concMedia);
-  $("#kHard").textContent = BRL(hardSaving);
-  $("#kCA").textContent = BRL(costAvoidance);
-  $("#kInv").textContent = BRL(investimento);
-  $("#kBen").textContent = BRL(beneficioTotal);
-  $("#kBcAvg").textContent = bcMedio !== "—" && bcMedio !== "∞" ? `${bcMedio}x` : bcMedio;
-  $("#kPending").textContent = String(pendentesUsers);
-
-  // Agrupamento por área de negócio
-  const mapAreas = {};
-  lista.forEach((k) => {
-    const area = k.areaNegocio || "Não informada";
-    if (!mapAreas[area]) {
-      mapAreas[area] = { area, n: 0, somaPct: 0, hs: 0, ca: 0, inv: 0, ben: 0 };
-    }
-    const g = mapAreas[area];
-    const b = Number(k.beneficio) || 0;
-    g.n++;
-    g.somaPct += Number(k.percentual) || 0;
-    g.inv += Number(k.custo) || 0;
-    g.ben += b;
-    if (k.tipoBeneficio === "hard_saving") g.hs += b;
-    if (k.tipoBeneficio === "cost_avoidance") g.ca += b;
-  });
-
-  const resumoAreas = Object.values(mapAreas).map((g) => ({
-    ...g,
-    conc: g.n ? g.somaPct / g.n : 0
-  })).sort((a, b) => b.ben - a.ben);
-
-  renderTabelaArea(resumoAreas);
-  renderDashboardCharts(lista, resumoAreas);
+  renderTabelaArea(resumo.areas, resumo);
+  renderDashboardCharts(lista, resumo.areas);
 }
 
-function renderTabelaArea(resumo) {
+function renderTabelaArea(resumo, totais) {
   const tbody = $("#tbArea tbody");
   const tfoot = $("#tbArea tfoot");
   if (!tbody || !tfoot) return;
@@ -452,11 +443,19 @@ function renderTabelaArea(resumo) {
 
     const tdHs = document.createElement("td");
     tdHs.className = "num";
-    tdHs.textContent = BRL(g.hs);
+    tdHs.textContent = BRL(g.hsPrev);
 
     const tdCa = document.createElement("td");
     tdCa.className = "num";
-    tdCa.textContent = BRL(g.ca);
+    tdCa.textContent = BRL(g.caPrev);
+
+    const tdBenPrev = document.createElement("td");
+    tdBenPrev.className = "num";
+    tdBenPrev.textContent = BRL(g.beneficioPrevisto);
+
+    const tdBenReal = document.createElement("td");
+    tdBenReal.className = "num";
+    tdBenReal.textContent = BRL(g.beneficioRealizado);
 
     const tdInv = document.createElement("td");
     tdInv.className = "num";
@@ -467,16 +466,20 @@ function renderTabelaArea(resumo) {
     tr.appendChild(tdConc);
     tr.appendChild(tdHs);
     tr.appendChild(tdCa);
+    tr.appendChild(tdBenPrev);
+    tr.appendChild(tdBenReal);
     tr.appendChild(tdInv);
 
     tbody.appendChild(tr);
   });
 
-  const totalN = resumo.reduce((a, g) => a + g.n, 0);
-  const totalConc = totalN ? resumo.reduce((a, g) => a + g.somaPct, 0) / totalN : 0;
-  const totalHs = resumo.reduce((a, g) => a + g.hs, 0);
-  const totalCa = resumo.reduce((a, g) => a + g.ca, 0);
-  const totalInv = resumo.reduce((a, g) => a + g.inv, 0);
+  const totalN = totais ? totais.total : resumo.reduce((a, g) => a + g.n, 0);
+  const totalConc = totais ? totais.conclusaoMedia : (totalN ? resumo.reduce((a, g) => a + g.conc * g.n, 0) / totalN : 0);
+  const totalHs = resumo.reduce((a, g) => a + g.hsPrev, 0);
+  const totalCa = resumo.reduce((a, g) => a + g.caPrev, 0);
+  const totalBenPrev = totais ? totais.beneficioPrevisto : resumo.reduce((a, g) => a + g.beneficioPrevisto, 0);
+  const totalBenReal = totais ? totais.beneficioRealizado : resumo.reduce((a, g) => a + g.beneficioRealizado, 0);
+  const totalInv = totais ? totais.investimento : resumo.reduce((a, g) => a + g.inv, 0);
 
   tfoot.innerHTML = "";
   const trFoot = document.createElement("tr");
@@ -495,6 +498,12 @@ function renderTabelaArea(resumo) {
   const tdTotCa = document.createElement("td");
   tdTotCa.className = "num";
   tdTotCa.textContent = BRL(totalCa);
+  const tdTotBenPrev = document.createElement("td");
+  tdTotBenPrev.className = "num";
+  tdTotBenPrev.textContent = BRL(totalBenPrev);
+  const tdTotBenReal = document.createElement("td");
+  tdTotBenReal.className = "num";
+  tdTotBenReal.textContent = BRL(totalBenReal);
   const tdTotInv = document.createElement("td");
   tdTotInv.className = "num";
   tdTotInv.textContent = BRL(totalInv);
@@ -504,6 +513,8 @@ function renderTabelaArea(resumo) {
   trFoot.appendChild(tdTotConc);
   trFoot.appendChild(tdTotHs);
   trFoot.appendChild(tdTotCa);
+  trFoot.appendChild(tdTotBenPrev);
+  trFoot.appendChild(tdTotBenReal);
   trFoot.appendChild(tdTotInv);
   tfoot.appendChild(trFoot);
 }
@@ -670,7 +681,7 @@ function renderDashboardCharts(lista, resumoAreas) {
             maxBarThickness: 20
           },
           {
-            label: "Benefício total",
+            label: "Benefício previsto",
             data: dataBen,
             backgroundColor: theme.ok,
             borderRadius: 4,
@@ -721,8 +732,8 @@ function renderDashboardCharts(lista, resumoAreas) {
     if (!canvas) return;
 
     const labels = resumoAreas.map((g) => g.area);
-    const dataHs = resumoAreas.map((g) => g.hs);
-    const dataCa = resumoAreas.map((g) => g.ca);
+    const dataHs = resumoAreas.map((g) => g.hsPrev);
+    const dataCa = resumoAreas.map((g) => g.caPrev);
 
     const chart = new window.Chart(canvas, {
       type: "bar",
@@ -1061,6 +1072,8 @@ function exportCSV() {
     "Status",
     "% Conclusão",
     "Tipo de Benefício",
+    "Benefício Previsto (R$)",
+    "Benefício Realizado (R$)",
     "Benefício Anual (R$)",
     "Custo Implantação (R$)",
     "B/C Ratio",
@@ -1083,6 +1096,8 @@ function exportCSV() {
     k.status || "em_andamento",
     k.percentual ?? 0,
     k.tipoBeneficio || "",
+    beneficioPrevistoDe(k),
+    beneficioRealizadoDe(k) ?? "",
     k.beneficio || 0,
     k.custo || 0,
     k.bcRatio !== null ? k.bcRatio : "",

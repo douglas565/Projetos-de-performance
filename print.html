@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Impressão Kaizen · STANDARD KAIZEN SOL-FR-0013</title>
-  <link rel="stylesheet" href="style.css?v=20261127-02">
+  <link rel="stylesheet" href="style.css?v=20261127-03">
   <style>
     /* Estilos específicos de impressão */
     @page {
@@ -406,8 +406,9 @@
   <!-- BLOCO 8: RESULTADOS (BUSINESS CASE) -->
   <div class="p-box" style="margin-bottom:12px">
     <h3>8. Resultados (Business Case)</h3>
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:8px;font-size:11px">
-      <div><strong>Benefício Anual:</strong> <span id="pBeneficio">R$ 0,00</span></div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:8px;font-size:11px">
+      <div><strong>Benefício Previsto:</strong> <span id="pBeneficio">R$ 0,00</span></div>
+      <div><strong>Benefício Realizado:</strong> <span id="pBeneficioRealizado">Não informado</span></div>
       <div><strong>Custo de Implantação:</strong> <span id="pCusto">R$ 0,00</span></div>
       <div><strong>B/C Ratio:</strong> <span id="pBcRatioVal">—</span></div>
       <div><strong>Tipo de Benefício:</strong> <span id="pTipoBeneficioVal">—</span></div>
@@ -547,8 +548,11 @@
     document.getElementById("pStatus").textContent = formatStatus(k.status);
     document.getElementById("pPercentual").textContent = `${k.percentual || 0}%`;
 
-    const b = Number(k.beneficio) || 0;
+    const b = k.beneficioPrevisto !== undefined && k.beneficioPrevisto !== null
+      ? (Number(k.beneficioPrevisto) || 0)
+      : (Number(k.beneficio) || 0);
     const c = Number(k.custo) || 0;
+    const temRealizado = k.beneficioRealizado !== undefined && k.beneficioRealizado !== null && k.beneficioRealizado !== "" && Number.isFinite(Number(k.beneficioRealizado));
     const ratio = calculateBcRatio(b, c);
     document.getElementById("pBcRatio").textContent = ratio !== null ? `${ratio}x` : "—";
     document.getElementById("pBcRatioVal").textContent = ratio !== null ? `${ratio}x` : "—";
@@ -558,6 +562,12 @@
     document.getElementById("pTipoBeneficioVal").textContent = benTypeLabel;
 
     document.getElementById("pBeneficio").textContent = b.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+    const elBenReal = document.getElementById("pBeneficioRealizado");
+    if (elBenReal) {
+      elBenReal.textContent = temRealizado
+        ? Number(k.beneficioRealizado).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+        : "Não informado";
+    }
     document.getElementById("pCusto").textContent = c.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
     document.getElementById("pBcObs").textContent = k.bcObs || "—";
 
