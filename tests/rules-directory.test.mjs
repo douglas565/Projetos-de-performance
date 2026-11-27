@@ -21,7 +21,8 @@ before(async () => {
     for (const [uid, role, status] of [
       ["admin", "admin", "active"],
       ["member", "user", "active"],
-      ["pending", "user", "pending"]
+      ["pending", "user", "pending"],
+      ["blocked", "user", "blocked"]
     ]) {
       await setDoc(doc(db, "users", uid), { uid, role, status });
       await setDoc(doc(db, "directory", uid), { uid, email: `${uid}@example.com`, nome: uid, status });
@@ -33,7 +34,9 @@ after(async () => env?.cleanup());
 
 const checks = [
   ["active member can list directory", async () => assertSucceeds(getDocs(collection(authContext("member"), "directory")))],
-  ["pending user cannot list directory", async () => assertFails(getDocs(collection(authContext("pending"), "directory")))],
+  // v2.5.1 — usuário recém-cadastrado (pending) pode buscar colegas para compartilhar.
+  ["pending user can list directory", async () => assertSucceeds(getDocs(collection(authContext("pending"), "directory")))],
+  ["blocked user cannot list directory", async () => assertFails(getDocs(collection(authContext("blocked"), "directory")))],
   ["admin approval propagates status to directory", async () => {
     await assertSucceeds(updateDoc(doc(authContext("admin"), "users", "pending"), { status: "active" }));
     await assertSucceeds(updateDoc(doc(authContext("admin"), "directory", "pending"), { status: "active" }));

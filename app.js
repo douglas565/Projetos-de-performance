@@ -154,17 +154,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Verifica status de aprovação de conta
-    if (profile?.status === "pending") {
-      showView("pending");
-      return;
-    }
     if (profile?.status === "blocked") {
       showView("blocked");
       return;
     }
 
-    // Conta ativa: entra no Hub
+    // v2.5.1: usuário recém-cadastrado (pending) entra no Hub e opera normalmente.
+    // A aprovação do admin deixa de ser pré-requisito para criar/salvar os próprios kaizens.
     showView("hub");
+    $("#pendingBanner")?.classList.toggle("hidden", profile?.status !== "pending");
     startHubSubscription();
   });
 });

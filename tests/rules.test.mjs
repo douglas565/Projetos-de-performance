@@ -39,7 +39,8 @@ before(async () => {
     const db = context.firestore();
     for (const [uid, role, status] of [
       ["owner", "user", "active"], ["viewer", "user", "active"], ["editor", "user", "active"],
-      ["admin", "admin", "active"], ["pending", "user", "pending"], ["stranger", "user", "active"]
+      ["admin", "admin", "active"], ["pending", "user", "pending"], ["stranger", "user", "active"],
+      ["blocked", "user", "blocked"], ["blockedadmin", "admin", "blocked"]
     ]) {
       await setDoc(doc(db, "users", uid), { uid, role, status });
     }
@@ -82,7 +83,21 @@ const checks = [
     await assertSucceeds(deleteDoc(kaizenRef(authContext("admin"), "admin-delete")));
   }],
   ["anonymous denied", async () => assertFails(getDoc(kaizenRef(env.unauthenticatedContext().firestore())))],
-  ["pending user denied", async () => assertFails(getDoc(kaizenRef(authContext("pending"))))],
+  // v2.5.1 — usuário recém-cadastrado (pending) opera os PRÓPRIOS kaizens.
+  ["pending cannot read others kaizen", async () => assertFails(getDoc(kaizenRef(authContext("pending"))))],
+  ["pending can create own kaizen", async () => {
+    const proprio = { ...seedKaizen, ownerUid: "pending", shares: [], viewersUids: [], editorsUids: [], sharedWithUids: [], projeto: "Kaizen do pendente" };
+    await assertSucceeds(setDoc(kaizenRef(authContext("pending"), "pending-own"), proprio));
+  }],
+  ["pending can get own kaizen", async () => assertSucceeds(getDoc(kaizenRef(authContext("pending"), "pending-own")))],
+  ["pending can list own kaizens", async () => assertSucceeds(getDocs(query(collection(authContext("pending"), "kaizens"), where("ownerUid", "==", "pending"))))],
+  ["pending can update own kaizen", async () => assertSucceeds(updateDoc(kaizenRef(authContext("pending"), "pending-own"), { projeto: "Atualizado pelo pendente", rev: 2, atualizadoEm: now }))],
+  ["blocked cannot get a kaizen", async () => assertFails(getDoc(kaizenRef(authContext("blocked"))))],
+  ["blocked cannot create own kaizen", async () => {
+    const proprio = { ...seedKaizen, ownerUid: "blocked", shares: [], viewersUids: [], editorsUids: [], sharedWithUids: [], projeto: "Bloqueado" };
+    await assertFails(setDoc(kaizenRef(authContext("blocked"), "blocked-own"), proprio));
+  }],
+  ["blocked admin denied", async () => assertFails(getDoc(kaizenRef(authContext("blockedadmin"))))],
   ["cannot create with another owner uid", async () => assertFails(setDoc(kaizenRef(authContext("owner"), "wrong-owner"), { ...seedKaizen, ownerUid: "other" }))],
   ["cannot create with wrong schemaVersion", async () => assertFails(setDoc(kaizenRef(authContext("owner"), "wrong-schema"), { ...seedKaizen, ownerUid: "owner", schemaVersion: 1 }))],
   ["cannot create with wrong initial rev", async () => assertFails(setDoc(kaizenRef(authContext("owner"), "wrong-rev"), { ...seedKaizen, ownerUid: "owner", rev: 2 }))],

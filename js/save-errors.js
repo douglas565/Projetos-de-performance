@@ -2,7 +2,7 @@ export const MAX_SAVE_ATTEMPTS = 6;
 export const RETRY_DELAYS_MS = [2000, 5000, 15000, 30000, 60000, 60000];
 
 const PERMANENT_ERRORS = {
-  "permission-denied": "Sem permissão para salvar. Verifique se sua conta está aprovada e o e-mail confirmado.",
+  "permission-denied": "Sem permissão para salvar. Se você acabou de se cadastrar, saia e entre novamente; se persistir, sua conta pode estar bloqueada — fale com o administrador.",
   unauthenticated: "Sessão expirada. Entre novamente.",
   "invalid-argument": "Os dados do Kaizen têm formato inválido.",
   "failed-precondition": "Documento em formato antigo ou índice ausente no banco.",

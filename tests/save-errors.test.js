@@ -11,7 +11,7 @@ test("classifySaveError identifica permission-denied como permanente", () => {
   assert.deepEqual(classifySaveError({ code: "permission-denied" }), {
     permanent: true,
     code: "permission-denied",
-    message: "Sem permissão para salvar. Verifique se sua conta está aprovada e o e-mail confirmado."
+    message: "Sem permissão para salvar. Se você acabou de se cadastrar, saia e entre novamente; se persistir, sua conta pode estar bloqueada — fale com o administrador."
   });
 });
 

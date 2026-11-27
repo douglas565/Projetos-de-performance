@@ -29,7 +29,7 @@ describe("Status do cadastro propagado para directory/", () => {
   test("rules permitem admin atualizar directory e barram autoelevação", () => {
     const start = rules.indexOf("match /directory/{userId}");
     const block = rules.slice(start, start + 900);
-    assert.ok(block.includes("allow read: if isActive();"), "leitura continua restrita a usuários ativos");
+    assert.ok(block.includes("allow read: if isAllowed();"), "leitura liberada para usuários autenticados não bloqueados (pending/active)");
     assert.ok(block.includes("isAdmin()"), "admin pode atualizar status do directory");
     assert.ok(block.includes("request.resource.data.status == get("), "status só muda para o valor de users/{uid}");
     assert.ok(block.includes("documents/users/$(userId)).data.status"), "comparação com users/{uid}.status");

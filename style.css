@@ -1254,3 +1254,19 @@ tr.done td {
     margin-bottom: 12px !important;
   }
 }
+
+/* v2.5.1 — aviso de conta em análise (não bloqueia o uso) */
+.pending-banner {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--warning, #d97706) 45%, transparent);
+  background: color-mix(in srgb, var(--warning, #d97706) 12%, transparent);
+  color: var(--text, #111827);
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+.pending-banner.hidden { display: none; }

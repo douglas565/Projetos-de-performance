@@ -38,7 +38,7 @@ export function translateAuthError(code) {
     "auth/requires-recent-login": "Por segurança, entre novamente para concluir esta ação.",
     "auth/unauthorized-domain": "Domínio não autorizado no Firebase (erro de configuração no console).",
     "auth/operation-not-allowed": "Login por e-mail/senha não está habilitado no Firebase.",
-    "permission-denied": "Você não tem permissão para esta ação.",
+    "permission-denied": "Você não tem permissão para esta ação. Se acabou de se cadastrar, saia e entre novamente; se persistir, fale com o administrador.",
     "unavailable": "Sem conexão com o banco. Nada foi salvo.",
     "failed-precondition": "Índice do banco não configurado (erro de administração)."
   };

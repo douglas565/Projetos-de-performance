@@ -8,7 +8,11 @@ service cloud.firestore {
     function userDoc()   { return /databases/$(database)/documents/users/$(uid()); }
     function me()        { return get(userDoc()).data; }
     function isActive()  { return signedIn() && exists(userDoc()) && me().status == 'active'; }
-    function isAdmin()   { return isActive() && me().role == 'admin'; }
+    // v2.5.1: qualquer usuário autenticado e NÃO bloqueado pode operar os próprios
+    // kaizens (inclusive recém-cadastrado/pending). 'blocked' continua sem acesso.
+    function isBlocked() { return signedIn() && exists(userDoc()) && me().status == 'blocked'; }
+    function isAllowed() { return signedIn() && !isBlocked(); }
+    function isAdmin()   { return isAllowed() && exists(userDoc()) && me().role == 'admin'; }
     function configDoc() { return /databases/$(database)/documents/config/app; }
     function verified()  {
       return request.auth.token.email_verified == true
@@ -32,9 +36,10 @@ service cloud.firestore {
     }
 
     // ---------- diretório de usuários para compartilhamento ----------
-    // Permite que usuários ativos busquem colegas por e-mail/nome sem expor a coleção users/
+    // Permite que usuários autenticados (pending ou active) busquem colegas por e-mail/nome
+    // sem expor a coleção users/
     match /directory/{userId} {
-      allow read: if isActive();
+      allow read: if isAllowed();
       allow create: if signedIn() && uid() == userId
         && request.resource.data.uid == userId
         && exists(/databases/$(database)/documents/users/$(userId))
@@ -102,7 +107,7 @@ service cloud.firestore {
       }
 
       function canRead() {
-        return isActive() && (
+        return isAllowed() && (
           k().ownerUid == uid()
           || (('sharedWithUids' in k()) && uid() in k().sharedWithUids)
           || (('viewersUids' in k()) && uid() in k().viewersUids)
@@ -112,7 +117,7 @@ service cloud.firestore {
       }
 
       function canWrite() {
-        return isActive() && (
+        return isAllowed() && (
           k().ownerUid == uid()
           || (('editorsUids' in k()) && uid() in k().editorsUids)
           || isAdmin()
@@ -123,16 +128,16 @@ service cloud.firestore {
       // Firestore evaluates query constraints against candidate documents. Keep each
       // membership predicate paired with the exact query field; never grant a generic list.
       allow list: if isAdmin()
-        || (isActive() && k().ownerUid == uid())
-        || (isActive() && ('sharedWithUids' in k()) && uid() in k().sharedWithUids);
+        || (isAllowed() && k().ownerUid == uid())
+        || (isAllowed() && ('sharedWithUids' in k()) && uid() in k().sharedWithUids);
 
-      allow create: if isActive() && verified()
+      allow create: if isAllowed()
         && nk().ownerUid == uid()
         && nk().schemaVersion == 2
         && nk().rev == 1
         && nk().arquivado == false;
 
-      allow update: if canWrite() && verified()
+      allow update: if canWrite()
         && nk().ownerUid == k().ownerUid
         && nk().schemaVersion == k().schemaVersion
         && nk().rev == k().rev + 1
@@ -144,11 +149,11 @@ service cloud.firestore {
 
     // ---------- histórico de auditoria (opcional append-only) ----------
     match /kaizens/{kaizenId}/historico/{eventoId} {
-      allow read: if isActive() && (
+      allow read: if isAllowed() && (
         get(/databases/$(database)/documents/kaizens/$(kaizenId)).data.ownerUid == uid()
         || isAdmin()
       );
-      allow create: if isActive() && request.resource.data.uid == uid();
+      allow create: if isAllowed() && request.resource.data.uid == uid();
       allow update, delete: if false;
     }
 
