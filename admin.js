@@ -21,6 +21,7 @@ import { initVersionProbe, getLocalIdentity, formatIdentity } from "./js/version
 import { restoreKaizen } from "./js/db.js";
 import { calcularPercentual } from "./js/percentual.js";
 import { agregarDashboard, beneficioPrevistoDe, beneficioRealizadoDe } from "./js/dashboard-metrics.js";
+import { migrarBeneficioPrevistoRealizado } from "./js/kaizen-model.js";
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => document.querySelectorAll(s);
@@ -321,7 +322,7 @@ function setupFilters() {
 async function loadKaizens() {
   try {
     const snap = await getDocs(query(collection(db, "kaizens"), orderBy("atualizadoEm", "desc")));
-    allKaizens = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    allKaizens = snap.docs.map((d) => migrarBeneficioPrevistoRealizado({ id: d.id, ...d.data() }));
 
     // Atualiza filtro de áreas
     const areas = [...new Set(allKaizens.map((k) => k.areaNegocio).filter(Boolean))].sort();
@@ -1378,7 +1379,7 @@ function renderProjectsTable() {
     // Valor (R$)
     const tdVal = document.createElement("td");
     tdVal.className = "num";
-    tdVal.textContent = BRL(k.beneficio);
+    tdVal.textContent = BRL(beneficioPrevistoDe(k));
 
     // Rev
     const tdRev = document.createElement("td");

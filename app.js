@@ -1155,10 +1155,9 @@ function populateEditorForm(k, canEdit) {
 
 function updateBcRatioDisplay() {
   const previstoEl = $('[data-f="beneficioPrevisto"]');
-  const legadoEl = $('[data-f="beneficio"]');
   const rawPrevisto = previstoEl
     ? previstoEl.value
-    : (legadoEl ? legadoEl.value : (activeKaizen ? beneficioPrevistoDe(activeKaizen) : 0));
+    : (activeKaizen ? beneficioPrevistoDe(activeKaizen) : 0);
   const b = Number(rawPrevisto) || 0;
   const c = Number($('[data-f="custo"]')?.value) || 0;
   const ratio = calculateBcRatio(b, c);
@@ -1234,7 +1233,8 @@ function handleFieldInput(target) {
     activeKaizen.bcRatio = calculateBcRatio(activeKaizen.beneficioPrevisto, activeKaizen.custo);
   } else if (f === "beneficioRealizado") {
     const raw = String(target.value ?? "").trim();
-    activeKaizen.beneficioRealizado = raw === "" ? null : (Number(raw) || 0);
+    const n = Number(raw);
+    activeKaizen.beneficioRealizado = raw === "" || !Number.isFinite(n) ? null : n;
   } else if (f === "custo") {
     activeKaizen.custo = Number(target.value) || 0;
     updateBcRatioDisplay();
