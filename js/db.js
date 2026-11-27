@@ -26,6 +26,7 @@ import {
   beneficioPrevistoDe
 } from "./kaizen-model.js";
 import { aplicarPercentualAutomatico } from "./percentual.js";
+import { podeAcessarHub } from "./access.js";
 import {
   classifySaveError,
   retryDelayMs,
@@ -47,7 +48,6 @@ export function subscribeToHubKaizens(user, userProfile, onUpdate, onError) {
   if (!user) return () => {};
 
   const isAdmin = userProfile && userProfile.role === "admin";
-  const isActiveUser = userProfile?.status === "active";
   const kaizensRef = collection(db, "kaizens");
 
   if (isAdmin) {
@@ -67,8 +67,8 @@ export function subscribeToHubKaizens(user, userProfile, onUpdate, onError) {
     );
   }
 
-  if (!isActiveUser) {
-    queueMicrotask(() => onError?.({ code: "permission-denied", message: "Seu cadastro ainda não está ativo; você não tem acesso aos projetos." }));
+  if (!podeAcessarHub(userProfile)) {
+    queueMicrotask(() => onError?.({ code: "permission-denied", message: "Sua conta está bloqueada; você não tem acesso aos projetos." }));
     return () => {};
   }
 

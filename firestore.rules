@@ -8,11 +8,11 @@ service cloud.firestore {
     function userDoc()   { return /databases/$(database)/documents/users/$(uid()); }
     function me()        { return get(userDoc()).data; }
     function isActive()  { return signedIn() && exists(userDoc()) && me().status == 'active'; }
-    // v2.5.1: qualquer usuário autenticado e NÃO bloqueado pode operar os próprios
-    // kaizens (inclusive recém-cadastrado/pending). 'blocked' continua sem acesso.
+    // v2.5.1: só active/pending têm acesso; qualquer outro status (blocked, suspenso,
+    // digitado errado) e conta sem doc users ficam de fora.
     function isBlocked() { return signedIn() && exists(userDoc()) && me().status == 'blocked'; }
-    function isAllowed() { return signedIn() && !isBlocked(); }
-    function isAdmin()   { return isAllowed() && exists(userDoc()) && me().role == 'admin'; }
+    function isAllowed() { return signedIn() && exists(userDoc()) && me().status in ['active', 'pending']; }
+    function isAdmin()   { return isAllowed() && me().role == 'admin'; }
     function configDoc() { return /databases/$(database)/documents/config/app; }
     function verified()  {
       return request.auth.token.email_verified == true
@@ -144,7 +144,7 @@ service cloud.firestore {
         && nk().atualizadoEm != null
         && (isOwnerOrAdmin() || sameSharing());
 
-      allow delete: if isOwnerOrAdmin();
+      allow delete: if isAllowed() && isOwnerOrAdmin();
     }
 
     // ---------- histórico de auditoria (opcional append-only) ----------

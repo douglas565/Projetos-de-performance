@@ -13,7 +13,8 @@ Agora:
 - A confirmação de e-mail **não bloqueia mais** o salvamento.
 - Usuário `pending` também consegue buscar colegas no `directory` para compartilhar.
 - Invariantes preservados: `ownerUid` imutável no update, `schemaVersion` imutável, `rev` sempre +1,
-  `arquivado=false` no create, editor não altera as 4 listas de compartilhamento, delete segue admin-only.
+  `arquivado=false` no create, editor não altera as 4 listas de compartilhamento, delete exige `isAllowed()`
+  (blocked não apaga nem o próprio kaizen).
 
 ## Passo a passo (Console do Firebase)
 

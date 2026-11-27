@@ -97,6 +97,16 @@ const checks = [
     const proprio = { ...seedKaizen, ownerUid: "blocked", shares: [], viewersUids: [], editorsUids: [], sharedWithUids: [], projeto: "Bloqueado" };
     await assertFails(setDoc(kaizenRef(authContext("blocked"), "blocked-own"), proprio));
   }],
+  ["blocked cannot update own kaizen", async () => {
+    const proprio = { ...seedKaizen, ownerUid: "blocked", shares: [], viewersUids: [], editorsUids: [], sharedWithUids: [], projeto: "Bloqueado update" };
+    await env.withSecurityRulesDisabled((context) => setDoc(kaizenRef(context.firestore(), "blocked-update"), proprio));
+    await assertFails(updateDoc(kaizenRef(authContext("blocked"), "blocked-update"), { projeto: "Tentou", rev: 2, atualizadoEm: now }));
+  }],
+  ["blocked cannot delete own kaizen", async () => {
+    const proprio = { ...seedKaizen, ownerUid: "blocked", shares: [], viewersUids: [], editorsUids: [], sharedWithUids: [], projeto: "Bloqueado delete" };
+    await env.withSecurityRulesDisabled((context) => setDoc(kaizenRef(context.firestore(), "blocked-delete"), proprio));
+    await assertFails(deleteDoc(kaizenRef(authContext("blocked"), "blocked-delete")));
+  }],
   ["blocked admin denied", async () => assertFails(getDoc(kaizenRef(authContext("blockedadmin"))))],
   ["cannot create with another owner uid", async () => assertFails(setDoc(kaizenRef(authContext("owner"), "wrong-owner"), { ...seedKaizen, ownerUid: "other" }))],
   ["cannot create with wrong schemaVersion", async () => assertFails(setDoc(kaizenRef(authContext("owner"), "wrong-schema"), { ...seedKaizen, ownerUid: "owner", schemaVersion: 1 }))],
