@@ -12,8 +12,8 @@
 //                              beneficio numérico > 0, custo numérico finito >= 0,
 //                              tipoBeneficio preenchido e bcObs preenchido
 //                              (bcRatio é derivado e não pontua)
-//   7) plano de ação .... até 5,0  ->  5 * (ações com texto) / (total de ações)
-//                                      (0 ações = 0 pontos; teto 5)
+//   7) plano de ação .... até 5,0  ->  5 * (ações CONCLUÍDAS) / (total de ações)
+//                                      status === "concluida"; 0 ações = 0; teto 5
 //   8) 5W2H ............. até 7,0  ->  1 ponto por campo preenchido (7 campos)
 //
 //   pontos = soma exata das etapas (NENHUM arredondamento intermediário)
@@ -56,19 +56,6 @@ function numeroPreenchido(valor) {
 }
 
 /**
- * Texto da ação do plano.
- * O schema v2 grava a descrição em `descricao`; a especificação usa `acao`.
- * Aceitamos os dois (sem contar duas vezes) para que dados novos e legados
- * pontuem igual.
- */
-function textoDaAcao(acao) {
-  if (!acao || typeof acao !== "object") return "";
-  if (textoPreenchido(acao.acao)) return acao.acao;
-  if (textoPreenchido(acao.descricao)) return acao.descricao;
-  return "";
-}
-
-/**
  * Business Case (step 8): 0,5 ponto apenas com os 4 campos completos.
  */
 export function avaliarBusinessCase(kaizen) {
@@ -92,16 +79,17 @@ export function avaliarBusinessCase(kaizen) {
 }
 
 /**
- * Plano de ação: pool de 5 pontos proporcional às ações com texto preenchido.
+ * Plano de ação: pool de 5 pontos proporcional às ações CONCLUÍDAS.
+ * Uma ação só pontua quando `status === "concluida"` (o texto sozinho não pontua).
  */
 export function calcularPontosPlanoAcao(acoes) {
   const lista = Array.isArray(acoes) ? acoes : [];
   const total = lista.length;
-  if (total === 0) return { pontos: 0, total: 0, comTexto: 0 };
+  if (total === 0) return { pontos: 0, total: 0, concluidas: 0 };
 
-  const comTexto = lista.filter((a) => textoDaAcao(a).trim().length > 0).length;
-  const pontos = Math.min(5, (5 * comTexto) / total);
-  return { pontos, total, comTexto };
+  const concluidas = lista.filter((a) => a && typeof a === "object" && a.status === "concluida").length;
+  const pontos = Math.min(5, (5 * concluidas) / total);
+  return { pontos, total, concluidas };
 }
 
 /**

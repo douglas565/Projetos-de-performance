@@ -140,30 +140,45 @@ test("business case: benefício 0 não completa o BC", () => {
   assert.equal(calcularPercentualDetalhado(k).etapas.businessCase, 0);
 });
 
-test("plano de ação: 0 ações => 0; 2 ações com 1 descrita => 2,5; 2 descritas => 5", () => {
-  assert.deepEqual(calcularPontosPlanoAcao([]), { pontos: 0, total: 0, comTexto: 0 });
+test("plano de ação: pontua só ações CONCLUÍDAS (5 / total cada)", () => {
+  assert.deepEqual(calcularPontosPlanoAcao([]), { pontos: 0, total: 0, concluidas: 0 });
   assert.equal(calcularPontosPlanoAcao(undefined).pontos, 0);
 
+  // Descrição preenchida NÃO pontua se não estiver concluída.
+  const descritasSemConcluir = calcularPontosPlanoAcao([
+    { acao: "Mapear umidade", status: "pendente" },
+    { acao: "Automatizar esteira", status: "andamento" }
+  ]);
+  assert.equal(descritasSemConcluir.pontos, 0);
+
+  // 1 de 2 concluída => 2,5
   const umaDeDuas = calcularPontosPlanoAcao([
-    { acao: "Mapear umidade" },
-    { acao: "" }
+    { acao: "Mapear umidade", status: "concluida" },
+    { acao: "Automatizar esteira", status: "pendente" }
   ]);
   assert.equal(umaDeDuas.pontos, 2.5);
-  assert.equal(umaDeDuas.comTexto, 1);
+  assert.equal(umaDeDuas.concluidas, 1);
   assert.equal(umaDeDuas.total, 2);
 
+  // 2 de 2 concluídas => 5 (teto)
   const duasDeDuas = calcularPontosPlanoAcao([
-    { acao: "Mapear umidade" },
-    { acao: "Automatizar esteira" }
+    { acao: "Mapear umidade", status: "concluida" },
+    { acao: "Automatizar esteira", status: "concluida" }
   ]);
   assert.equal(duasDeDuas.pontos, 5, "teto de 5 pontos");
 
-  // Compatibilidade com o schema v2 (descricao)
-  assert.equal(calcularPontosPlanoAcao([{ descricao: "Ação v2" }, { acao: "" }]).pontos, 2.5);
-  // Ação nula / vazia não conta e divide o pool
-  assert.equal(calcularPontosPlanoAcao([null, { acao: "ok" }]).pontos, 2.5);
+  // Ação nula não conta e divide o pool; status desconhecido não pontua.
+  assert.equal(calcularPontosPlanoAcao([null, { acao: "ok", status: "concluida" }]).pontos, 2.5);
+  assert.equal(calcularPontosPlanoAcao([{ acao: "a", status: "concluido" }]).pontos, 0);
   // Pool nunca passa de 5
-  assert.equal(calcularPontosPlanoAcao([{ acao: "a" }, { acao: "b" }, { acao: "c" }]).pontos, 5);
+  assert.equal(
+    calcularPontosPlanoAcao([
+      { acao: "a", status: "concluida" },
+      { acao: "b", status: "concluida" },
+      { acao: "c", status: "concluida" }
+    ]).pontos,
+    5
+  );
 });
 
 test("5W2H: 3 de 7 campos => 3 pontos", () => {
