@@ -410,4 +410,5 @@ test("migrateLegacyProject() recalcula percentual dos campos e ignora valor manu
   const v2 = migrateLegacyProject(legacy, { uid: "u-legado" });
   assert.equal(v2.percentual, 24, "4/17 => 24%, não o 100% manual");
   assert.equal(v2.percentualOrigem, "auto");
+  assert.equal(v2.percentualManualLegado, 100, "valor manual preservado para rollback");
 });

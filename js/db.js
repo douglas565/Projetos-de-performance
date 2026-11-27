@@ -148,6 +148,10 @@ export async function saveKaizenWithTransaction(kaizenId, kaizenData, user) {
   // F2 — ponto ÚNICO de gravação: o percentual nunca vem do chamador.
   // Sempre recalculado a partir dos campos, de modo que nenhum caminho
   // (editor, wizard, retry, migração, script) consiga gravar valor divergente.
+  // Documento v2 antigo (origem não-auto) preserva o valor manual uma única vez.
+  if (kaizenData.percentualOrigem !== "auto" && kaizenData.percentualManualLegado === undefined) {
+    kaizenData.percentualManualLegado = Number(kaizenData.percentual) || 0;
+  }
   aplicarPercentualAutomatico(kaizenData);
 
   return await runTransaction(db, async (transaction) => {

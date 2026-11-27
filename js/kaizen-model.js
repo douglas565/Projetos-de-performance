@@ -567,6 +567,8 @@ export function migrateLegacyProject(legacy, user = {}) {
 
   const beneficio = Number(legacy.beneficio ?? legacy.Beneficio) || 0;
   const custo = Number(legacy.custo ?? legacy.Custo) || 0;
+  // Valor manual antigo preservado uma única vez (auditoria/rollback).
+  const pctLegado = legacy.percentualManualLegado ?? legacy.percentual ?? legacy.Percentual;
 
   const acoes = migrateLegacyActions(legacy.acoes || legacy.Acoes);
   const riscos = migrateLegacyRisks(legacy.riscos || legacy.Riscos);
@@ -611,6 +613,9 @@ export function migrateLegacyProject(legacy, user = {}) {
     status: legacy.status || "em_andamento",
     percentual: 0, // recalculado logo abaixo a partir dos campos migrados
     percentualOrigem: "auto",
+    percentualManualLegado: pctLegado === undefined || pctLegado === null || pctLegado === ""
+      ? null
+      : (Number(pctLegado) || 0),
     visibilidade: "privado",
     ownerUid: uid,
     ownerEmail: email,
