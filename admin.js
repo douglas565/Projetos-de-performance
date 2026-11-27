@@ -19,6 +19,7 @@ import {
 import { showToast, initThemeToggle, escapeHtml } from "./js/ui.js";
 import { initVersionProbe, getLocalIdentity, formatIdentity } from "./js/version.js";
 import { restoreKaizen } from "./js/db.js";
+import { calcularPercentual } from "./js/percentual.js";
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => document.querySelectorAll(s);
@@ -195,11 +196,100 @@ function setupTabs() {
   });
 }
 
+/**
+ * F5 — Recalcula o percentual automático (17 pontos) de TODOS os kaizens.
+ * Roda com a sessão do admin (as rules permitem update por admin).
+ * Baixa um backup JSON completo ANTES de qualquer gravação e é idempotente:
+ * documentos já migrados (origem auto e percentual igual) são pulados.
+ */
+async function recalcularPercentualTodos() {
+  if (!Array.isArray(allKaizens) || allKaizens.length === 0) {
+    showToast("Nenhum kaizen carregado para recalcular.", "error");
+    return;
+  }
+
+  const total = allKaizens.length;
+  if (!window.confirm(`Recalcular o percentual de ${total} kaizen(s)?\n\nUm backup JSON completo será baixado antes de qualquer gravação.`)) {
+    return;
+  }
+
+  const btn = $("#btnRecalcPct");
+  const rotuloOriginal = btn ? btn.textContent : "";
+  if (btn) btn.disabled = true;
+
+  // BACKUP PRIMEIRO — baixa o estado atual de todos os documentos.
+  const backup = { criadoEm: new Date().toISOString(), total, docs: allKaizens };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `kaizen-percentual-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+  let atualizados = 0;
+  let pulados = 0;
+  let erros = 0;
+  const mudancas = [];
+
+  for (let i = 0; i < allKaizens.length; i++) {
+    const k = allKaizens[i];
+    if (btn) btn.textContent = `Recalculando ${i + 1}/${total}...`;
+    try {
+      const novo = calcularPercentual(k);
+      const antigo = Number(k.percentual) || 0;
+      const jaAuto = k.percentualOrigem === "auto";
+
+      if (jaAuto && antigo === novo && "percentualManualLegado" in k) {
+        pulados++;
+        continue;
+      }
+
+      const patch = { percentual: novo, percentualOrigem: "auto" };
+      if (!("percentualManualLegado" in k) && !jaAuto) {
+        patch.percentualManualLegado = antigo;
+      }
+
+      await updateDoc(doc(db, "kaizens", k.id), patch);
+      atualizados++;
+      if (antigo !== novo) mudancas.push({ id: k.id, codigo: k.codigo || "", de: antigo, para: novo });
+
+      k.percentual = novo;
+      k.percentualOrigem = "auto";
+      if (patch.percentualManualLegado !== undefined) k.percentualManualLegado = patch.percentualManualLegado;
+    } catch (e) {
+      erros++;
+      console.error("Falha ao recalcular percentual de", k.id, e);
+    }
+  }
+
+  if (btn) {
+    btn.disabled = false;
+    btn.textContent = rotuloOriginal;
+  }
+
+  console.log("Recálculo em massa do percentual", { total, atualizados, pulados, erros, mudancas });
+  showToast(
+    `% recalculado: ${atualizados} atualizado(s), ${pulados} já ok, ${erros} erro(s). Backup baixado.`,
+    erros ? "error" : "ok"
+  );
+
+  try {
+    renderDashboard();
+    renderProjectsTable();
+  } catch (e) {
+    console.error("Falha ao re-renderizar após recálculo", e);
+  }
+}
+
 function setupFilters() {
   ["#fArea", "#fTipo"].forEach((s) => {
     $(s)?.addEventListener("change", renderDashboard);
   });
   $("#btnExport")?.addEventListener("click", exportCSV);
+  $("#btnRecalcPct")?.addEventListener("click", recalcularPercentualTodos);
 
   // Re-renderizar gráficos quando o tema alternar
   const themeObserver = new MutationObserver(() => {

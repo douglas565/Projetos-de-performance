@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="app-version" content="2.3.2">
-  <meta name="app-build" content="20261126-01">
+  <meta name="app-version" content="2.4.0">
+  <meta name="app-build" content="20261127-01">
   <title>Painel Executivo · Kaizen Hub v2</title>
-  <link rel="stylesheet" href="style.css?v=20261126-01">
-  <link rel="stylesheet" href="admin.css?v=20261126-01">
+  <link rel="stylesheet" href="style.css?v=20261127-01">
+  <link rel="stylesheet" href="admin.css?v=20261127-01">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
@@ -22,7 +22,7 @@
   </div>
   <div class="topbar-right">
     <button type="button" id="btnToggleTheme" class="btn ghost small" aria-label="Alternar tema">🌙 Tema escuro</button>
-    <a href="index.html?v=20261126-01" class="btn ghost small">← Meus projetos</a>
+    <a href="index.html?v=20261127-01" class="btn ghost small">← Meus projetos</a>
     <span id="userChip" class="chip"></span>
     <button type="button" id="btnLogout" class="btn ghost small">Sair</button>
   </div>
@@ -35,7 +35,7 @@
     <p class="muted" id="deniedMsg" style="margin:12px 0 20px">
       Este painel é exclusivo para administradores.
     </p>
-    <a href="index.html?v=20261126-01" class="btn primary block">Voltar ao hub</a>
+    <a href="index.html?v=20261127-01" class="btn primary block">Voltar ao hub</a>
   </div>
 </main>
 
@@ -73,6 +73,7 @@
           <option value="performance">Performance</option>
         </select>
         <button type="button" id="btnExport" class="btn small ghost">Exportar CSV (filtro atual)</button>
+        <button type="button" id="btnRecalcPct" class="btn small primary" title="Recalcula o percentual automático (17 pontos) de todos os kaizens. Baixa um backup JSON antes de gravar.">🔄 Recalcular % de todos</button>
       </div>
     </div>
 
@@ -293,6 +294,6 @@
 
 <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
-<script type="module" src="admin.js?v=20261126-01"></script>
+<script type="module" src="admin.js?v=20261127-01"></script>
 </body>
 </html>
