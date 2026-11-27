@@ -391,3 +391,23 @@ test("validateWizardStep() valida requisitos específicos de cada etapa do wizar
   kIdentificado.tipoBeneficio = "hard_saving";
   assert.equal(validateWizardStep(kIdentificado, 8).valid, true);
 });
+
+test("createDefaultKaizen() já nasce com percentual automático 0 (origem auto)", () => {
+  const k = createDefaultKaizen({ uid: "u1", email: "u1@empresa.com" });
+  assert.equal(k.percentual, 0);
+  assert.equal(k.percentualOrigem, "auto");
+});
+
+test("migrateLegacyProject() recalcula percentual dos campos e ignora valor manual legado", () => {
+  const legacy = {
+    Projeto: "Projeto Legado",
+    Incomodo: "Perda de material",
+    Causas: "Falta de padrão",
+    Meta: "Reduzir 10%",
+    Padronizacao: "POP revisado",
+    Percentual: 100
+  };
+  const v2 = migrateLegacyProject(legacy, { uid: "u-legado" });
+  assert.equal(v2.percentual, 24, "4/17 => 24%, não o 100% manual");
+  assert.equal(v2.percentualOrigem, "auto");
+});

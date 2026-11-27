@@ -3,6 +3,8 @@
 // Compatível com navegador (ESM) e Node.js (node --test)
 // ============================================================
 
+import { aplicarPercentualAutomatico } from "./percentual.js";
+
 /**
  * Gera código único para o Kaizen no cliente: KZ-YYYYMMDD-XXXX
  */
@@ -229,6 +231,7 @@ export function syncSharingLists(shares) {
 
 /**
  * Cria a estrutura padrão de um Kaizen v2 em branco
+ * O percentual é SEMPRE derivado dos campos (automático, nunca manual).
  */
 export function createDefaultKaizen(user = {}) {
   const today = new Date().toISOString().split("T")[0];
@@ -236,7 +239,7 @@ export function createDefaultKaizen(user = {}) {
   const email = user.email || "";
   const nome = user.displayName || (email ? email.split("@")[0] : "");
 
-  return {
+  const kaizen = {
     schemaVersion: 2,
     rev: 1,
     codigo: generateKaizenCode(),
@@ -283,7 +286,8 @@ export function createDefaultKaizen(user = {}) {
     links: [],
     anexos: [],
     status: "em_andamento", // rascunho | em_andamento | concluido | cancelado
-    percentual: 0,
+    percentual: 0, // recalculado logo abaixo pela fórmula automática
+    percentualOrigem: "auto",
     visibilidade: "privado", // Fixo: todo kaizen é individual e privado por padrão
     ownerUid: uid,
     ownerEmail: email,
@@ -299,6 +303,10 @@ export function createDefaultKaizen(user = {}) {
     atualizadoEm: null,
     atualizadoPor: uid
   };
+
+  // Fórmula automática: kaizen novo (campos vazios) => 0
+  aplicarPercentualAutomatico(kaizen);
+  return kaizen;
 }
 
 /**
@@ -559,7 +567,6 @@ export function migrateLegacyProject(legacy, user = {}) {
 
   const beneficio = Number(legacy.beneficio ?? legacy.Beneficio) || 0;
   const custo = Number(legacy.custo ?? legacy.Custo) || 0;
-  const pct = Number(legacy.percentual ?? legacy.Percentual) || 0;
 
   const acoes = migrateLegacyActions(legacy.acoes || legacy.Acoes);
   const riscos = migrateLegacyRisks(legacy.riscos || legacy.Riscos);
@@ -601,8 +608,9 @@ export function migrateLegacyProject(legacy, user = {}) {
     riscos,
     links: Array.isArray(legacy.links) ? legacy.links : [],
     anexos: [],
-    status: legacy.status || (pct >= 100 ? "concluido" : "em_andamento"),
-    percentual: pct,
+    status: legacy.status || "em_andamento",
+    percentual: 0, // recalculado logo abaixo a partir dos campos migrados
+    percentualOrigem: "auto",
     visibilidade: "privado",
     ownerUid: uid,
     ownerEmail: email,
@@ -617,6 +625,10 @@ export function migrateLegacyProject(legacy, user = {}) {
     atualizadoEm: legacy.atualizadoEm || legacy.AtualizadoEm || null,
     atualizadoPor: legacy.atualizadoPor || uid
   };
+
+  // Percentual automático: recalculado dos campos migrados (ignora valor legado manual)
+  aplicarPercentualAutomatico(v2);
+  if (!legacy.status && v2.percentual >= 100) v2.status = "concluido";
 
   v2.searchKeywords = generateSearchKeywords(v2);
   return v2;

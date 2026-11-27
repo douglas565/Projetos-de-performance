@@ -25,12 +25,15 @@ import {
   validateKaizen,
   validateWizardStep,
   calculateBcRatio,
-  calculatePercentualFromActions,
   calculateRiskScore,
   canUserRead,
   canUserEdit,
   normalizeString
 } from "./js/kaizen-model.js";
+import {
+  aplicarPercentualAutomatico,
+  calcularPercentualDetalhado
+} from "./js/percentual.js";
 import {
   showToast,
   setSaveStatus,
@@ -680,11 +683,10 @@ function setupEditorUI() {
     }
 
     activeKaizen.status = "concluido";
-    activeKaizen.percentual = 100;
+    // Percentual é automático: recalculado dos campos, nunca forçado a 100.
+    refreshPercentual();
     const selStatus = document.querySelector('[data-f="status"]');
     if (selStatus) selStatus.value = "concluido";
-    const inPct = document.querySelector('[data-f="percentual"]');
-    if (inPct) inPct.value = 100;
 
     $("#editorStatusPill").textContent = formatStatus("concluido");
     triggerSave();
@@ -1065,7 +1067,8 @@ function populateEditorForm(k, canEdit) {
   $('[data-f="areaNegocio"]').value = k.areaNegocio || "Operação";
   $('[data-f="tipo"]').value = k.tipo || "kaizen";
   $('[data-f="status"]').value = k.status || "em_andamento";
-  $('[data-f="percentual"]').value = k.percentual ?? 0;
+  // F3: percentual somente leitura — recalculado dos campos ao popular o editor
+  refreshPercentual();
 
   // Blocos 1, 3 e 5
   $('[data-f="incomodo"]').value = k.incomodo || "";
@@ -1147,6 +1150,46 @@ function updateBcRatioDisplay() {
   }
 }
 
+function formatPontos(valor) {
+  const n = Number(valor) || 0;
+  return Number.isInteger(n) ? String(n) : n.toFixed(1).replace(".", ",");
+}
+
+/**
+ * F3 — Atualiza o readout SOMENTE LEITURA do percentual no editor.
+ * Não existe input editável: o valor é sempre derivado dos campos.
+ */
+function updatePercentualDisplay(pct = activeKaizen ? activeKaizen.percentual : 0) {
+  const valor = Math.max(0, Math.min(100, Math.round(Number(pct) || 0)));
+
+  const txt = $("#pctValue");
+  if (txt) txt.textContent = `${valor}%`;
+
+  const bar = $("#pctBar");
+  if (bar) bar.style.width = `${valor}%`;
+
+  const track = $("#pctTrack");
+  if (track) track.setAttribute("aria-valuenow", String(valor));
+
+  const det = $("#pctDetalhe");
+  if (det && activeKaizen) {
+    const d = calcularPercentualDetalhado(activeKaizen);
+    det.textContent = `${formatPontos(d.pontos)} de ${d.total} pontos`;
+  }
+}
+
+/**
+ * F2 — Recalcula o percentual a partir dos campos (fórmula congelada de 17
+ * pontos) e propaga para o objeto ativo e para o readout. Chamado antes de
+ * qualquer gravação e a cada alteração de campo.
+ */
+function refreshPercentual() {
+  if (!activeKaizen) return 0;
+  const pct = aplicarPercentualAutomatico(activeKaizen);
+  updatePercentualDisplay(pct);
+  return pct;
+}
+
 function handleFieldInput(target) {
   if (!activeKaizen) return;
   const f = target.getAttribute("data-f");
@@ -1168,8 +1211,6 @@ function handleFieldInput(target) {
     activeKaizen[f] = Number(target.value) || 0;
     updateBcRatioDisplay();
     activeKaizen.bcRatio = calculateBcRatio(activeKaizen.beneficio, activeKaizen.custo);
-  } else if (f === "percentual") {
-    activeKaizen.percentual = Math.min(100, Math.max(0, Number(target.value) || 0));
   } else {
     activeKaizen[f] = target.value;
     if (f === "projeto") {
@@ -1184,7 +1225,10 @@ function handleFieldInput(target) {
 }
 
 function triggerSave() {
-  if (!activeKaizen || !activeKaizen.id) return;
+  if (!activeKaizen) return;
+  // F2/F3: qualquer alteração recalcula o percentual antes de gravar/exibir
+  refreshPercentual();
+  if (!activeKaizen.id) return;
   if (!canUserEdit(activeKaizen, currentUser, currentUserProfile)) return;
 
   setDirtyFlag(true);
@@ -1385,20 +1429,10 @@ function addActionRow() {
 }
 
 function recalculatePercentual() {
-  if (!activeKaizen || !Array.isArray(activeKaizen.acoes)) return;
-  const pct = calculatePercentualFromActions(activeKaizen.acoes);
-  activeKaizen.percentual = pct;
-  const pctInput = $('[data-f="percentual"]');
-  if (pctInput) pctInput.value = pct;
-
-  if (pct === 100 && activeKaizen.status !== "concluido") {
-    activeKaizen.status = "concluido";
-    $('[data-f="status"]').value = "concluido";
-    $("#editorStatusPill").textContent = "Concluído";
-  }
-
+  if (!activeKaizen) return;
+  const pct = refreshPercentual();
   triggerSave();
-  showToast(`Percentual recalculado para ${pct}%.`, "ok");
+  showToast(`Percentual recalculado automaticamente: ${pct}%.`, "ok");
 }
 
 // ============================================================

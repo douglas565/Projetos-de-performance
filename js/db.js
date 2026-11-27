@@ -23,6 +23,7 @@ import {
   migrateLegacyProject,
   normalizeKaizenSharing
 } from "./kaizen-model.js";
+import { aplicarPercentualAutomatico } from "./percentual.js";
 import {
   classifySaveError,
   retryDelayMs,
@@ -143,6 +144,11 @@ export async function getKaizenById(kaizenId) {
 export async function saveKaizenWithTransaction(kaizenId, kaizenData, user) {
   if (!user || !user.uid) throw new Error("Usuário não autenticado.");
   const docRef = doc(db, "kaizens", kaizenId);
+
+  // F2 — ponto ÚNICO de gravação: o percentual nunca vem do chamador.
+  // Sempre recalculado a partir dos campos, de modo que nenhum caminho
+  // (editor, wizard, retry, migração, script) consiga gravar valor divergente.
+  aplicarPercentualAutomatico(kaizenData);
 
   return await runTransaction(db, async (transaction) => {
     const snap = await transaction.get(docRef);

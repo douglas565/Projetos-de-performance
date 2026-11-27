@@ -337,8 +337,14 @@
               <option value="cancelado">Cancelado</option>
             </select>
           </label>
-          <label>% CONCLUÍDA
-            <input type="number" data-f="percentual" min="0" max="100" step="5" placeholder="0">
+          <label>% CONCLUÍDA (automático)
+            <span class="pct-readout" id="pctReadout" title="Calculado automaticamente a partir dos campos (fórmula de 17 pontos)">
+              <strong id="pctValue">0%</strong>
+              <span class="pct-track" id="pctTrack" role="progressbar" aria-label="Percentual de conclusão" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                <span class="pct-fill" id="pctBar"></span>
+              </span>
+              <small id="pctDetalhe" class="hint">0 de 17 pontos</small>
+            </span>
           </label>
         </div>
       </section>
@@ -420,8 +426,8 @@
         </div>
 
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;flex-wrap:wrap;gap:8px">
-          <span class="hint">O % de conclusão pode ser calculado pelo plano:</span>
-          <button type="button" id="btnCalcPct" class="btn small ghost">Recalcular % pelas ações</button>
+          <span class="hint">O % de conclusão é calculado automaticamente a partir dos campos (17 pontos).</span>
+          <button type="button" id="btnCalcPct" class="btn small ghost">Atualizar % automático</button>
         </div>
       </section>
     </div>

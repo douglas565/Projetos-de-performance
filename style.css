@@ -463,6 +463,45 @@ fieldset {
   letter-spacing: normal;
 }
 
+/* ---------- Percentual automático (somente leitura) ---------- */
+.pct-readout {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 5px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  text-transform: none;
+  letter-spacing: normal;
+}
+.pct-readout strong {
+  font-size: 20px;
+  line-height: 1.1;
+  color: var(--brand);
+  font-variant-numeric: tabular-nums;
+}
+.pct-track {
+  display: block;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+.pct-fill {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--brand), var(--ok));
+  transition: width 0.2s ease;
+}
+.pct-readout .hint {
+  margin: 0;
+  font-size: 11px;
+}
+
 /* ---------- Layout de Cards e Grid ---------- */
 .container {
   max-width: 1440px;
