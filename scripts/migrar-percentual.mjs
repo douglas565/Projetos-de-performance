@@ -59,7 +59,7 @@ console.log(`Documentos lidos: ${docs.length}`);
 fs.writeFileSync(backupPath, JSON.stringify({ criadoEm: new Date().toISOString(), total: docs.length, docs }, null, 2));
 console.log(`Backup: ${backupPath} (${fs.statSync(backupPath).size} bytes)`);
 
-const stats = { total: docs.length, iguais: 0, atualizar: 0, semMudancaPercentual: 0, erros: 0 };
+const stats = { total: docs.length, iguais: 0, atualizar: 0, percentualAlterado: 0, erros: 0 };
 const mudancas = [];
 const erros = [];
 
@@ -83,7 +83,7 @@ for (const { id, data } of docs) {
 
     stats.atualizar++;
     if (antigo !== novo) {
-      stats.semMudancaPercentual++;
+      stats.percentualAlterado++;
       mudancas.push({ id, de: antigo, para: novo });
     }
 

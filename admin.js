@@ -251,6 +251,10 @@ async function recalcularPercentualTodos() {
       if (!("percentualManualLegado" in k) && !jaAuto) {
         patch.percentualManualLegado = antigo;
       }
+      // Concorrência otimista: incrementa rev para editores com cópia antiga perceberem o conflito.
+      patch.rev = (Number(k.rev) || 1) + 1;
+      patch.atualizadoEm = serverTimestamp();
+      if (currentUser?.uid) patch.atualizadoPor = currentUser.uid;
 
       await updateDoc(doc(db, "kaizens", k.id), patch);
       atualizados++;
@@ -258,6 +262,7 @@ async function recalcularPercentualTodos() {
 
       k.percentual = novo;
       k.percentualOrigem = "auto";
+      k.rev = patch.rev;
       if (patch.percentualManualLegado !== undefined) k.percentualManualLegado = patch.percentualManualLegado;
     } catch (e) {
       erros++;
